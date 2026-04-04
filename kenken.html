@@ -1,0 +1,1852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>KenKen Solver</title>
+<style>
+  /* ============================================================
+     BASE
+     ============================================================ */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0f0f1a;
+    color: #e0e0e0;
+    min-height: 100vh;
+    padding: 16px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.5rem;
+    margin-bottom: 16px;
+    color: #fff;
+    letter-spacing: 0.5px;
+  }
+  .module {
+    max-width: 520px;
+    margin: 0 auto 24px;
+    display: none;
+  }
+  .module.active { display: block; }
+  .panel {
+    background: #1a1a2e;
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid #2a2a4a;
+  }
+  .panel h2 {
+    font-size: 1rem;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    transition: all 0.15s;
+    min-height: 44px;
+  }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ============================================================
+     MODULE 1: LOAD PUZZLE
+     ============================================================ */
+  .load-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .option-card {
+    background: #222244;
+    border: 1px solid #333366;
+    border-radius: 8px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .option-card:hover { background: #2a2a55; border-color: #4a4a88; }
+  .option-card h3 {
+    font-size: 1rem;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .option-card p {
+    font-size: 0.85rem;
+    color: #888;
+    margin: 0;
+  }
+  .option-sub {
+    display: none;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #333;
+  }
+  .option-sub.open { display: block; }
+  .size-buttons, .example-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .size-buttons button, .example-buttons button {
+    background: #2a2a4a;
+    color: #bbb;
+    padding: 10px 16px;
+    font-size: 14px;
+    min-width: 48px;
+  }
+  .size-buttons button:hover, .example-buttons button:hover {
+    background: #3a3a5a;
+    color: #fff;
+  }
+  #camera-input { display: none; }
+  .photo-preview {
+    max-width: 100%;
+    max-height: 120px;
+    border-radius: 6px;
+    object-fit: contain;
+    margin-top: 8px;
+  }
+  #scan-status {
+    font-size: 13px;
+    color: #aaa;
+    margin-top: 8px;
+  }
+
+  /* ============================================================
+     SHARED GRID STYLES (borders, labels)
+     ============================================================ */
+  .bt { border-top: 3px solid #e0e0e0 !important; }
+  .bb { border-bottom: 3px solid #e0e0e0 !important; }
+  .bl { border-left: 3px solid #e0e0e0 !important; }
+  .br { border-right: 3px solid #e0e0e0 !important; }
+  .bt-thin { border-top: 1px solid #444 !important; }
+  .bb-thin { border-bottom: 1px solid #444 !important; }
+  .bl-thin { border-left: 1px solid #444 !important; }
+  .br-thin { border-right: 1px solid #444 !important; }
+  .cage-label {
+    position: absolute;
+    top: 2px;
+    left: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #ccc;
+    pointer-events: none;
+  }
+
+  /* ============================================================
+     MODULE 2: PUZZLE EDITOR
+     ============================================================ */
+  .editor-grid-wrap {
+    overflow-x: auto;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 12px;
+  }
+  .editor-grid {
+    border-collapse: collapse;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .editor-grid td {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #888;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .editor-grid.eg-7 td,
+  .editor-grid.eg-8 td,
+  .editor-grid.eg-9 td {
+    width: 42px;
+    height: 42px;
+    font-size: 0.75rem;
+  }
+  .editor-grid.eg-7 .cage-label,
+  .editor-grid.eg-8 .cage-label,
+  .editor-grid.eg-9 .cage-label {
+    font-size: 9px;
+    top: 1px;
+    left: 3px;
+  }
+  .cell-selected {
+    background: rgba(200, 210, 255, 0.35) !important;
+    outline: 2px solid #8aafff;
+    outline-offset: -2px;
+    z-index: 1;
+    position: relative;
+  }
+  .cell-unassigned {
+    background: #1a1a2a !important;
+  }
+  .cell-error-dup {
+    box-shadow: inset 0 0 12px rgba(255, 50, 50, 0.6);
+  }
+  .cell-error-missing {
+    box-shadow: inset 0 0 0 2px rgba(255, 160, 50, 0.7);
+  }
+
+  /* Cage toolbar */
+  .cage-toolbar {
+    background: #16162e;
+    border: 1px solid #2a2a4a;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  .toolbar-info {
+    font-size: 13px;
+    color: #aaa;
+    margin-bottom: 8px;
+    min-height: 20px;
+  }
+  .toolbar-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .toolbar-row:last-child { margin-bottom: 0; }
+  .toolbar-label {
+    font-size: 13px;
+    color: #888;
+  }
+  .toolbar-input {
+    width: 64px;
+    padding: 6px 8px;
+    background: #12122a;
+    color: #e0e0e0;
+    border: 1px solid #333;
+    border-radius: 4px;
+    font-size: 14px;
+    text-align: center;
+  }
+  .toolbar-input:focus { outline: none; border-color: #5a5aff; }
+  .toolbar-input::-webkit-inner-spin-button,
+  .toolbar-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .toolbar-input { -moz-appearance: textfield; }
+  .op-btn {
+    padding: 8px 14px;
+    background: #2a2a4a;
+    color: #bbb;
+    border: 1px solid #333;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 700;
+    min-height: 36px;
+    min-width: 40px;
+  }
+  .op-btn:hover { background: #3a3a5a; color: #fff; }
+  .op-btn.active { background: #4a4aff; color: #fff; border-color: #5a5aff; }
+  .btn-action {
+    padding: 8px 14px;
+    background: #2d6a4f;
+    color: #fff;
+    font-size: 13px;
+    min-height: 36px;
+  }
+  .btn-action:hover:not(:disabled) { background: #40916c; }
+  .btn-secondary {
+    padding: 8px 14px;
+    background: #2a2a4a;
+    color: #bbb;
+    font-size: 13px;
+    min-height: 36px;
+  }
+  .btn-secondary:hover { background: #3a3a5a; color: #fff; }
+  .btn-danger {
+    padding: 8px 14px;
+    background: #6a2d2d;
+    color: #fff;
+    font-size: 13px;
+    min-height: 36px;
+  }
+  .btn-danger:hover { background: #8a3a3a; }
+
+  /* Validation panel */
+  .validation-panel {
+    background: #16162e;
+    border: 1px solid #2a2a4a;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    font-size: 13px;
+  }
+  .validation-ok { color: #4caf50; }
+  .validation-error { color: #ff8a65; }
+  .validation-list {
+    margin-top: 6px;
+    padding-left: 16px;
+    color: #ff8a65;
+    list-style-type: disc;
+  }
+  .validation-list li { margin-bottom: 2px; }
+
+  .btn-lock {
+    background: #4a4aff;
+    color: #fff;
+    width: 100%;
+    font-size: 16px;
+    padding: 14px;
+  }
+  .btn-lock:hover:not(:disabled) { background: #5c5cff; }
+
+  /* ============================================================
+     MODULE 3: SOLVE
+     ============================================================ */
+  .solve-grid-wrap {
+    overflow-x: auto;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 12px;
+  }
+  .kenken-grid {
+    border-collapse: collapse;
+  }
+  .kenken-grid td {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #fff;
+  }
+  .kenken-grid.size-7 td,
+  .kenken-grid.size-8 td,
+  .kenken-grid.size-9 td {
+    width: 42px;
+    height: 42px;
+    font-size: 1.2rem;
+  }
+  .kenken-grid.size-7 .cage-label,
+  .kenken-grid.size-8 .cage-label,
+  .kenken-grid.size-9 .cage-label {
+    font-size: 9px;
+    top: 1px;
+    left: 3px;
+  }
+  .btn-solve {
+    background: #4a4aff;
+    color: #fff;
+    width: 100%;
+    font-size: 16px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .btn-solve:hover { background: #5c5cff; }
+  #solve-status {
+    font-size: 14px;
+    text-align: center;
+    min-height: 20px;
+    margin-bottom: 8px;
+  }
+  #solve-status.success { color: #4caf50; }
+  #solve-status.error { color: #ff5252; }
+  #solution-text {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    color: #aaa;
+    white-space: pre;
+    text-align: center;
+    margin-top: 8px;
+  }
+  .btn-back {
+    background: #2a2a4a;
+    color: #bbb;
+    width: 100%;
+    font-size: 14px;
+    padding: 12px;
+    margin-top: 12px;
+  }
+  .btn-back:hover { background: #3a3a5a; color: #fff; }
+
+  /* ============================================================
+     MOBILE RESPONSIVE
+     ============================================================ */
+  @media (max-width: 768px) {
+    body { padding: 10px; }
+    h1 { font-size: 1.3rem; margin-bottom: 12px; }
+    .module { max-width: 100%; margin-bottom: 16px; }
+    .panel { padding: 14px; }
+    .editor-grid td {
+      width: 44px;
+      height: 44px;
+    }
+    .editor-grid.eg-7 td,
+    .editor-grid.eg-8 td,
+    .editor-grid.eg-9 td {
+      width: 36px;
+      height: 36px;
+    }
+    .kenken-grid td {
+      width: 44px;
+      height: 44px;
+      font-size: 1.2rem;
+    }
+    .kenken-grid.size-7 td,
+    .kenken-grid.size-8 td,
+    .kenken-grid.size-9 td {
+      width: 36px;
+      height: 36px;
+      font-size: 1rem;
+    }
+    .cage-label { font-size: 9px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>KenKen Solver</h1>
+
+<!-- MODULE 1: LOAD PUZZLE -->
+<div id="module-load" class="module active">
+  <div class="panel">
+    <h2>Load Puzzle</h2>
+    <div class="load-options">
+      <div class="option-card" id="card-scan" onclick="startScan()">
+        <h3>Scan Puzzle Photo</h3>
+        <p>Take a photo or upload an image of a KenKen puzzle</p>
+        <div id="scan-area" class="option-sub">
+          <input type="file" id="camera-input" accept="image/*" capture="environment" onchange="handlePhoto(this)">
+          <div id="scan-preview"></div>
+          <div id="scan-status"></div>
+        </div>
+      </div>
+      <div class="option-card" id="card-manual" onclick="toggleOption('manual')">
+        <h3>Manual Input</h3>
+        <p>Build a puzzle from scratch by selecting cells and defining cages</p>
+        <div id="manual-area" class="option-sub">
+          <div class="size-buttons">
+            <button onclick="event.stopPropagation(); openEditorBlank(3)">3</button>
+            <button onclick="event.stopPropagation(); openEditorBlank(4)">4</button>
+            <button onclick="event.stopPropagation(); openEditorBlank(5)">5</button>
+            <button onclick="event.stopPropagation(); openEditorBlank(6)">6</button>
+            <button onclick="event.stopPropagation(); openEditorBlank(7)">7</button>
+            <button onclick="event.stopPropagation(); openEditorBlank(8)">8</button>
+            <button onclick="event.stopPropagation(); openEditorBlank(9)">9</button>
+          </div>
+        </div>
+      </div>
+      <div class="option-card" id="card-test" onclick="toggleOption('test')">
+        <h3>Test Puzzle</h3>
+        <p>Load a built-in example puzzle to try out the editor</p>
+        <div id="test-area" class="option-sub">
+          <div class="example-buttons">
+            <button onclick="event.stopPropagation(); loadExample('3x3')">3x3</button>
+            <button onclick="event.stopPropagation(); loadExample('4x4')">4x4</button>
+            <button onclick="event.stopPropagation(); loadExample('5x5')">5x5</button>
+            <button onclick="event.stopPropagation(); loadExample('6x6')">6x6</button>
+            <button onclick="event.stopPropagation(); loadExample('7x7')">7x7</button>
+            <button onclick="event.stopPropagation(); loadExample('8x8')">8x8</button>
+            <button onclick="event.stopPropagation(); loadExample('9x9')">9x9</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODULE 2: PUZZLE EDITOR -->
+<div id="module-editor" class="module">
+  <div class="panel">
+    <h2>Puzzle Editor</h2>
+    <div class="editor-grid-wrap">
+      <table id="editor-grid" class="editor-grid"></table>
+    </div>
+    <div class="cage-toolbar">
+      <div class="toolbar-info" id="toolbar-info">Tap a cell to select it</div>
+      <div class="toolbar-row">
+        <span class="toolbar-label">Target:</span>
+        <input type="number" id="cage-target" class="toolbar-input" min="1" max="999" placeholder="#" oninput="updateToolbarButtons()" onfocus="this.select()">
+        <span class="toolbar-label" style="margin-left:4px">Op:</span>
+        <button class="op-btn" data-op="+" onclick="setOp('+')">+</button>
+        <button class="op-btn" data-op="-" onclick="setOp('-')">&#8722;</button>
+        <button class="op-btn" data-op="*" onclick="setOp('*')">&#215;</button>
+        <button class="op-btn" data-op="/" onclick="setOp('/')">&#247;</button>
+      </div>
+      <div class="toolbar-row">
+        <button class="btn-action" id="btn-set-cage" onclick="setCage()" disabled>Set Cage</button>
+        <button class="btn-action" id="btn-set-given" onclick="setGiven()" disabled>Set Given</button>
+      </div>
+      <div class="toolbar-row">
+        <button class="btn-secondary" onclick="selectWholeCage()">Select Cage</button>
+        <button class="btn-danger" onclick="clearCage()">Clear Cage</button>
+        <button class="btn-secondary" onclick="deselectAll()">Deselect</button>
+      </div>
+    </div>
+    <div class="validation-panel" id="validation-panel"></div>
+    <button class="btn-lock" id="btn-lock" onclick="lockPuzzle()" disabled>Lock Puzzle</button>
+    <button class="btn-back" onclick="newPuzzle()">&#8592; New Puzzle</button>
+  </div>
+</div>
+
+<!-- MODULE 3: SOLVE -->
+<div id="module-solve" class="module">
+  <div class="panel">
+    <h2>Solution</h2>
+    <div class="solve-grid-wrap">
+      <div id="solve-grid"></div>
+    </div>
+    <button class="btn-solve" onclick="solvePuzzle()">Solve</button>
+    <div id="solve-status"></div>
+    <div id="solution-text"></div>
+    <button class="btn-back" onclick="backToEditor()">&#8592; Back to Editor</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ============================================================
+//  BIT UTILITIES
+// ============================================================
+function popcount(x) {
+    x = x - ((x >>> 1) & 0x55555555);
+    x = (x & 0x33333333) + ((x >>> 2) & 0x33333333);
+    return (((x + (x >>> 4)) & 0x0F0F0F0F) * 0x01010101) >>> 24;
+}
+const BIT_TO_VAL = new Uint8Array(512);
+for (let v = 1; v <= 9; v++) BIT_TO_VAL[1 << (v - 1)] = v;
+
+// ============================================================
+//  SOLVER
+// ============================================================
+class KenKenSolver {
+    constructor(N, cages) {
+        this.N = N;
+        this.cages = cages;
+        this.allBits = (1 << N) - 1;
+        this.domains = new Uint16Array(N * N);
+        this.cageIdx = new Int8Array(N * N);
+        this.masterAssignments = [];
+        this._init();
+    }
+
+    _init() {
+        const N = this.N;
+        this.domains.fill(this.allBits);
+        this.cageIdx.fill(-1);
+        for (let ci = 0; ci < this.cages.length; ci++) {
+            for (const [r, c] of this.cages[ci].cells) {
+                this.cageIdx[r * N + c] = ci;
+            }
+        }
+        for (const cage of this.cages) {
+            this.masterAssignments.push(this._genAssignments(cage));
+        }
+        for (const cage of this.cages) {
+            if (cage.cells.length === 1) {
+                const [r, c] = cage.cells[0];
+                this.domains[r * N + c] = 1 << (cage.target - 1);
+            }
+        }
+    }
+
+    _genAssignments(cage) {
+        const { target, op, cells } = cage;
+        const N = this.N;
+        const k = cells.length;
+        if (k === 1) return [[target]];
+
+        const conflicts = [];
+        for (let i = 0; i < k; i++) {
+            conflicts[i] = [];
+            for (let j = 0; j < i; j++) {
+                if (cells[i][0] === cells[j][0] || cells[i][1] === cells[j][1]) {
+                    conflicts[i].push(j);
+                }
+            }
+        }
+
+        const results = [];
+        const t = new Uint8Array(k);
+
+        const gen = (idx, sum, prod) => {
+            if (idx === k) {
+                switch (op) {
+                    case '+': if (sum === target) results.push(Array.from(t)); break;
+                    case '*': if (prod === target) results.push(Array.from(t)); break;
+                    case '-': if (Math.abs(t[0] - t[1]) === target) results.push(Array.from(t)); break;
+                    case '/': {
+                        const a = t[0], b = t[1];
+                        if ((a >= b && a === b * target) || (b > a && b === a * target))
+                            results.push(Array.from(t));
+                        break;
+                    }
+                }
+                return;
+            }
+            for (let v = 1; v <= N; v++) {
+                let ok = true;
+                for (const j of conflicts[idx]) {
+                    if (t[j] === v) { ok = false; break; }
+                }
+                if (!ok) continue;
+
+                if (op === '+') {
+                    const ns = sum + v;
+                    const rem = k - idx - 1;
+                    if (ns + rem > target) continue;
+                    if (ns + rem * N < target) continue;
+                }
+                if (op === '*') {
+                    const np = prod * v;
+                    if (np > target) continue;
+                    if (idx < k - 1 && target % np !== 0) continue;
+                }
+
+                t[idx] = v;
+                gen(idx + 1, sum + v, prod * v);
+            }
+        };
+        gen(0, 0, 1);
+        return results;
+    }
+
+    solve() {
+        if (!this._propagate()) return null;
+        if (!this._search()) return null;
+        const N = this.N;
+        const sol = [];
+        for (let r = 0; r < N; r++) {
+            sol[r] = [];
+            for (let c = 0; c < N; c++) {
+                sol[r][c] = BIT_TO_VAL[this.domains[r * N + c]];
+            }
+        }
+        return sol;
+    }
+
+    _propagate() {
+        const N = this.N;
+        const NN = N * N;
+        let changed = true;
+
+        while (changed) {
+            changed = false;
+
+            // Naked singles
+            for (let i = 0; i < NN; i++) {
+                if (popcount(this.domains[i]) !== 1) continue;
+                const val = this.domains[i];
+                const r = (i / N) | 0, c = i % N;
+                for (let c2 = 0; c2 < N; c2++) {
+                    if (c2 === c) continue;
+                    const idx = r * N + c2;
+                    if (this.domains[idx] & val) {
+                        this.domains[idx] &= ~val;
+                        if (!this.domains[idx]) return false;
+                        changed = true;
+                    }
+                }
+                for (let r2 = 0; r2 < N; r2++) {
+                    if (r2 === r) continue;
+                    const idx = r2 * N + c;
+                    if (this.domains[idx] & val) {
+                        this.domains[idx] &= ~val;
+                        if (!this.domains[idx]) return false;
+                        changed = true;
+                    }
+                }
+            }
+
+            // Hidden singles
+            for (let r = 0; r < N; r++) {
+                for (let v = 0; v < N; v++) {
+                    const bit = 1 << v;
+                    let cnt = 0, last = -1;
+                    for (let c = 0; c < N; c++) {
+                        if (this.domains[r * N + c] & bit) { cnt++; last = c; }
+                    }
+                    if (cnt === 0) return false;
+                    if (cnt === 1 && this.domains[r * N + last] !== bit) {
+                        this.domains[r * N + last] = bit;
+                        changed = true;
+                    }
+                }
+            }
+            for (let c = 0; c < N; c++) {
+                for (let v = 0; v < N; v++) {
+                    const bit = 1 << v;
+                    let cnt = 0, last = -1;
+                    for (let r = 0; r < N; r++) {
+                        if (this.domains[r * N + c] & bit) { cnt++; last = r; }
+                    }
+                    if (cnt === 0) return false;
+                    if (cnt === 1 && this.domains[last * N + c] !== bit) {
+                        this.domains[last * N + c] = bit;
+                        changed = true;
+                    }
+                }
+            }
+
+            // Naked pairs
+            for (let r = 0; r < N; r++) {
+                for (let c1 = 0; c1 < N; c1++) {
+                    const d1 = this.domains[r * N + c1];
+                    if (popcount(d1) !== 2) continue;
+                    for (let c2 = c1 + 1; c2 < N; c2++) {
+                        if (this.domains[r * N + c2] !== d1) continue;
+                        for (let c3 = 0; c3 < N; c3++) {
+                            if (c3 === c1 || c3 === c2) continue;
+                            const idx = r * N + c3;
+                            if (this.domains[idx] & d1) {
+                                this.domains[idx] &= ~d1;
+                                if (!this.domains[idx]) return false;
+                                changed = true;
+                            }
+                        }
+                    }
+                }
+            }
+            for (let c = 0; c < N; c++) {
+                for (let r1 = 0; r1 < N; r1++) {
+                    const d1 = this.domains[r1 * N + c];
+                    if (popcount(d1) !== 2) continue;
+                    for (let r2 = r1 + 1; r2 < N; r2++) {
+                        if (this.domains[r2 * N + c] !== d1) continue;
+                        for (let r3 = 0; r3 < N; r3++) {
+                            if (r3 === r1 || r3 === r2) continue;
+                            const idx = r3 * N + c;
+                            if (this.domains[idx] & d1) {
+                                this.domains[idx] &= ~d1;
+                                if (!this.domains[idx]) return false;
+                                changed = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Naked triples
+            for (let r = 0; r < N; r++) {
+                for (let c1 = 0; c1 < N; c1++) {
+                    const d1 = this.domains[r * N + c1];
+                    if (popcount(d1) < 2 || popcount(d1) > 3) continue;
+                    for (let c2 = c1 + 1; c2 < N; c2++) {
+                        const u12 = d1 | this.domains[r * N + c2];
+                        if (popcount(u12) > 3) continue;
+                        for (let c3 = c2 + 1; c3 < N; c3++) {
+                            const u123 = u12 | this.domains[r * N + c3];
+                            if (popcount(u123) !== 3) continue;
+                            for (let c4 = 0; c4 < N; c4++) {
+                                if (c4 === c1 || c4 === c2 || c4 === c3) continue;
+                                const idx = r * N + c4;
+                                if (this.domains[idx] & u123) {
+                                    this.domains[idx] &= ~u123;
+                                    if (!this.domains[idx]) return false;
+                                    changed = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            for (let c = 0; c < N; c++) {
+                for (let r1 = 0; r1 < N; r1++) {
+                    const d1 = this.domains[r1 * N + c];
+                    if (popcount(d1) < 2 || popcount(d1) > 3) continue;
+                    for (let r2 = r1 + 1; r2 < N; r2++) {
+                        const u12 = d1 | this.domains[r2 * N + c];
+                        if (popcount(u12) > 3) continue;
+                        for (let r3 = r2 + 1; r3 < N; r3++) {
+                            const u123 = u12 | this.domains[r3 * N + c];
+                            if (popcount(u123) !== 3) continue;
+                            for (let r4 = 0; r4 < N; r4++) {
+                                if (r4 === r1 || r4 === r2 || r4 === r3) continue;
+                                const idx = r4 * N + c;
+                                if (this.domains[idx] & u123) {
+                                    this.domains[idx] &= ~u123;
+                                    if (!this.domains[idx]) return false;
+                                    changed = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Cage constraints + intersection/pointing
+            for (let ci = 0; ci < this.cages.length; ci++) {
+                const cells = this.cages[ci].cells;
+                const k = cells.length;
+                const master = this.masterAssignments[ci];
+
+                const possibleBits = new Uint16Array(k);
+                const valRows = new Uint16Array(N);
+                const valCols = new Uint16Array(N);
+                let anyValid = false;
+                let mustAppearMask = this.allBits;
+
+                for (let ai = 0; ai < master.length; ai++) {
+                    const tuple = master[ai];
+                    let valid = true;
+                    for (let i = 0; i < k; i++) {
+                        if (!(this.domains[cells[i][0] * N + cells[i][1]] & (1 << (tuple[i] - 1)))) {
+                            valid = false; break;
+                        }
+                    }
+                    if (!valid) continue;
+                    anyValid = true;
+                    let seenMask = 0;
+                    for (let i = 0; i < k; i++) {
+                        const vBit = 1 << (tuple[i] - 1);
+                        possibleBits[i] |= vBit;
+                        valRows[tuple[i] - 1] |= (1 << cells[i][0]);
+                        valCols[tuple[i] - 1] |= (1 << cells[i][1]);
+                        seenMask |= vBit;
+                    }
+                    mustAppearMask &= seenMask;
+                }
+
+                if (!anyValid) return false;
+
+                for (let i = 0; i < k; i++) {
+                    const idx = cells[i][0] * N + cells[i][1];
+                    const nd = this.domains[idx] & possibleBits[i];
+                    if (nd !== this.domains[idx]) {
+                        this.domains[idx] = nd;
+                        if (!nd) return false;
+                        changed = true;
+                    }
+                }
+
+                if (k >= 2) {
+                    for (let v = 0; v < N; v++) {
+                        if (!valRows[v]) continue;
+                        if (!(mustAppearMask & (1 << v))) {
+                            valRows[v] = 0; valCols[v] = 0; continue;
+                        }
+                        const bit = 1 << v;
+
+                        if (popcount(valRows[v]) === 1) {
+                            const row = 31 - Math.clz32(valRows[v]);
+                            for (let cc = 0; cc < N; cc++) {
+                                const idx = row * N + cc;
+                                if (this.cageIdx[idx] !== ci && (this.domains[idx] & bit)) {
+                                    this.domains[idx] &= ~bit;
+                                    if (!this.domains[idx]) return false;
+                                    changed = true;
+                                }
+                            }
+                        }
+                        if (popcount(valCols[v]) === 1) {
+                            const col = 31 - Math.clz32(valCols[v]);
+                            for (let rr = 0; rr < N; rr++) {
+                                const idx = rr * N + col;
+                                if (this.cageIdx[idx] !== ci && (this.domains[idx] & bit)) {
+                                    this.domains[idx] &= ~bit;
+                                    if (!this.domains[idx]) return false;
+                                    changed = true;
+                                }
+                            }
+                        }
+                        valRows[v] = 0;
+                        valCols[v] = 0;
+                    }
+                } else {
+                    for (let v = 0; v < N; v++) { valRows[v] = 0; valCols[v] = 0; }
+                }
+            }
+        }
+        return true;
+    }
+
+    _search() {
+        const N = this.N;
+        let minPop = N + 1, bestIdx = -1;
+        for (let i = 0; i < N * N; i++) {
+            const p = popcount(this.domains[i]);
+            if (p > 1 && p < minPop) {
+                minPop = p;
+                bestIdx = i;
+                if (p === 2) break;
+            }
+        }
+        if (bestIdx === -1) return true;
+
+        const saved = new Uint16Array(this.domains);
+        let domain = this.domains[bestIdx];
+        while (domain) {
+            const bit = domain & (-domain);
+            domain ^= bit;
+            this.domains[bestIdx] = bit;
+            if (this._propagate() && this._search()) return true;
+            this.domains.set(saved);
+        }
+        return false;
+    }
+}
+
+// ============================================================
+//  PARSER
+// ============================================================
+function parseCellToken(token, size, lineNum) {
+    let m;
+    m = token.match(/^[Rr](\d+)[Cc](\d+)$/);
+    if (m) return [[parseInt(m[1]) - 1, parseInt(m[2]) - 1]];
+
+    m = token.match(/^([A-Ia-i])(\d+)$/);
+    if (m) return [[parseInt(m[2]) - 1, m[1].toUpperCase().charCodeAt(0) - 65]];
+
+    m = token.match(/^(\d+),(\d+)$/);
+    if (m) {
+        const a = parseInt(m[1]), b = parseInt(m[2]);
+        if (a >= 1 && a <= size && b >= 1 && b <= size) {
+            return [[a - 1, b - 1]];
+        }
+    }
+
+    const parts = token.split(',');
+    if (parts.length >= 1 && parts.every(p => /^\d{2}$/.test(p))) {
+        return parts.map(p => [parseInt(p[0]) - 1, parseInt(p[1]) - 1]);
+    }
+
+    throw new Error(`Line ${lineNum}: bad cell "${token}"`);
+}
+
+function parsePuzzle(text) {
+    const lines = text.trim().split('\n')
+        .map(l => l.trim())
+        .filter(l => l && !l.startsWith('#'));
+
+    if (lines.length < 2) throw new Error('Need at least a size line and one cage.');
+
+    const sizeMatch = lines[0].match(/^(\d+)(?:\s*[xX\u00d7]\s*(\d+))?$/);
+    if (!sizeMatch) throw new Error(`Invalid size "${lines[0]}". Use N or NxN.`);
+    const size = parseInt(sizeMatch[1]);
+    if (sizeMatch[2] && parseInt(sizeMatch[2]) !== size)
+        throw new Error('Grid must be square.');
+    if (isNaN(size) || size < 2 || size > 9)
+        throw new Error(`Grid size must be 2-9, got ${size}.`);
+
+    const cages = [];
+    const covered = new Set();
+
+    for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split(/\s+/);
+        if (parts.length < 2) throw new Error(`Line ${i + 1}: need target+op and cells`);
+
+        const m = parts[0].match(/^(\d+)([+\-*\/\u00d7\u00f7xX]?)$/);
+        if (!m) throw new Error(`Line ${i + 1}: bad target/op "${parts[0]}"`);
+
+        let target = parseInt(m[1]);
+        let op = m[2] || '';
+        if (op === '\u00d7' || op === 'x' || op === 'X') op = '*';
+        if (op === '\u00f7') op = '/';
+
+        const cells = [];
+        for (let j = 1; j < parts.length; j++) {
+            const parsed = parseCellToken(parts[j], size, i + 1);
+            for (const [r, c] of parsed) {
+                if (r < 0 || r >= size || c < 0 || c >= size)
+                    throw new Error(`Line ${i + 1}: cell ${parts[j]} out of bounds`);
+                const key = r * size + c;
+                if (covered.has(key))
+                    throw new Error(`Line ${i + 1}: cell (${r+1},${c+1}) already used`);
+                covered.add(key);
+                cells.push([r, c]);
+            }
+        }
+
+        if (cells.length === 1) op = '=';
+        if (cells.length > 1 && !op)
+            throw new Error(`Line ${i + 1}: multi-cell cage needs an operation`);
+        if ((op === '-' || op === '/') && cells.length !== 2)
+            throw new Error(`Line ${i + 1}: ${op} cages must have exactly 2 cells`);
+
+        cages.push({ target, op, cells });
+    }
+
+    if (covered.size !== size * size) {
+        const missing = [];
+        for (let r = 0; r < size; r++)
+            for (let c = 0; c < size; c++)
+                if (!covered.has(r * size + c)) missing.push(`(${r+1},${c+1})`);
+        throw new Error(`Cells not covered: ${missing.join(' ')}`);
+    }
+    return { size, cages };
+}
+
+// Lenient parser for scan results (doesn't throw on coverage/duplicate issues)
+function parsePuzzleLenient(text) {
+    const lines = text.trim().split('\n')
+        .map(l => l.trim())
+        .filter(l => l && !l.startsWith('#'));
+
+    if (lines.length < 1) return null;
+
+    const sizeMatch = lines[0].match(/^(\d+)(?:\s*[xX\u00d7]\s*(\d+))?$/);
+    if (!sizeMatch) return null;
+    const size = parseInt(sizeMatch[1]);
+    if (isNaN(size) || size < 2 || size > 9) return null;
+
+    const cages = [];
+
+    for (let i = 1; i < lines.length; i++) {
+        try {
+            const parts = lines[i].split(/\s+/);
+            if (parts.length < 2) continue;
+
+            const m = parts[0].match(/^(\d+)([+\-*\/\u00d7\u00f7xX]?)$/);
+            if (!m) continue;
+
+            let target = parseInt(m[1]);
+            let op = m[2] || '';
+            if (op === '\u00d7' || op === 'x' || op === 'X') op = '*';
+            if (op === '\u00f7') op = '/';
+
+            const cells = [];
+            for (let j = 1; j < parts.length; j++) {
+                try {
+                    const parsed = parseCellToken(parts[j], size, i + 1);
+                    for (const [r, c] of parsed) {
+                        if (r >= 0 && r < size && c >= 0 && c < size) {
+                            cells.push([r, c]);
+                        }
+                    }
+                } catch (e) { /* skip bad cell tokens */ }
+            }
+
+            if (cells.length === 0) continue;
+            if (cells.length === 1 && !op) op = '=';
+            if (cells.length > 1 && !op) continue;
+
+            cages.push({ target, op, cells });
+        } catch (e) { /* skip bad lines */ }
+    }
+
+    return { size, cages };
+}
+
+// ============================================================
+//  EXAMPLES
+// ============================================================
+const EXAMPLES = {
+'3x3': `3
+4+ 1,1 2,1
+12* 1,2 1,3 2,3
+5+ 2,2 3,2 3,3
+2 3,1`,
+
+'5x5': `5x5
+2/ 11,12
+12* 13,23,22,32
+2- 14,15
+9+ 25,35
+3+ 24,34
+2- 44,45
+2- 54,55
+2- 21,31
+10* 41,51,52
+8+ 43,53
+4 42
+2 33`,
+
+'4x4': `4
+12* 1,1 1,2
+2/ 1,3 2,3
+3- 1,4 2,4
+6* 2,1 2,2 3,1
+7+ 3,2 4,1 4,2
+72* 3,3 3,4 4,3 4,4`,
+
+'6x6': `6
+11+ 1,1 1,2
+12* 1,3 1,4
+6* 1,5 1,6 2,6
+6/ 2,1 2,2
+20* 2,3 2,4
+3/ 2,5 3,5
+9+ 3,1 3,2
+1- 3,3 3,4
+4* 3,6 4,6
+6* 4,1 5,1 6,1
+10* 4,2 4,3
+2/ 4,4 4,5
+4/ 5,2 5,3
+2/ 5,4 6,4
+16+ 5,5 5,6 6,6
+18* 6,2 6,3
+4 6,5`,
+
+'7x7': `7
+5+ 1,1 1,2 2,1
+12* 1,3 1,4
+1- 1,5 2,5
+42* 1,6 1,7
+7+ 2,2 2,3
+11+ 2,4 3,4
+7* 2,6 2,7
+7+ 3,1 4,1
+9+ 3,2 3,3
+10+ 3,5 3,6 3,7
+1- 4,2 4,3
+7/ 4,4 4,5
+6* 4,6 4,7
+30* 5,1 5,2
+6- 5,3 6,3
+2* 5,4 5,5
+7+ 5,6 5,7
+1- 6,1 6,2
+5+ 6,4 7,4
+12+ 6,5 6,6 6,7
+7/ 7,1 7,2
+2 7,3
+15+ 7,5 7,6 7,7`,
+
+'8x8': `8
+5+ 1,1 1,2 2,1
+12* 1,3 1,4
+1- 1,5 2,5
+13+ 1,6 1,7
+8* 1,8 2,8
+12* 2,2 2,3
+11+ 2,4 3,4
+15+ 2,6 2,7
+7+ 3,1 3,2
+30* 3,3 4,3
+1- 3,5 3,6
+3+ 3,7 3,8
+20* 4,1 4,2
+15+ 4,4 4,5
+3+ 4,6 5,6
+6* 4,7 4,8
+11+ 5,1 5,2
+56* 5,3 5,4
+3+ 5,5 6,5
+7+ 5,7 5,8
+42* 6,1 6,2
+8/ 6,3 6,4
+7+ 6,6 7,6
+9+ 6,7 6,8
+15+ 7,1 7,2
+2* 7,3 7,4
+7+ 7,5 8,5
+11+ 7,7 7,8
+8/ 8,1 8,2
+6* 8,3 8,4
+18+ 8,6 8,7 8,8`,
+
+'9x9': `9
+5+ 1,1 1,2 2,1
+1- 1,3 1,4
+18+ 1,5 1,6 2,6
+56* 1,7 1,8
+9/ 1,9 2,9
+12* 2,2 2,3
+30* 2,4 2,5
+72* 2,7 2,8
+11+ 3,1 3,2 4,1
+18+ 3,3 3,4 4,4
+56* 3,5 4,5
+72* 3,6 4,6
+12+ 3,7 3,8 3,9
+1- 4,2 4,3
+2/ 4,7 5,7
+9+ 4,8 4,9 5,9
+17+ 5,1 5,2 6,1
+1- 5,3 5,4
+9/ 5,5 5,6
+12* 5,8 6,8
+56* 6,2 6,3
+12+ 6,4 6,5 7,5
+6* 6,6 6,7
+30* 6,9 7,9
+15+ 7,1 7,2
+8- 7,3 7,4
+12+ 7,6 7,7 7,8
+26+ 8,1 8,2 9,1
+6+ 8,3 8,4 9,4
+12* 8,5 8,6
+1- 8,7 8,8
+1- 8,9 9,9
+2/ 9,2 9,3
+20* 9,5 9,6
+42* 9,7 9,8`
+};
+
+// ============================================================
+//  EDITOR STATE
+// ============================================================
+const editor = {
+    size: 0,
+    cages: [],
+    selected: new Set(),   // Set of "r,c" strings (0-indexed)
+    errors: [],
+    duplicates: new Set(), // Set of "r,c" strings
+    missing: new Set(),    // Set of "r,c" strings
+    activeOp: '',
+};
+
+// ============================================================
+//  MODULE TRANSITIONS
+// ============================================================
+function showModule(id) {
+    document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.getElementById(id).scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function toggleOption(name) {
+    const areas = ['scan', 'manual', 'test'];
+    for (const a of areas) {
+        const el = document.getElementById(a + '-area');
+        if (a === name) {
+            el.classList.toggle('open');
+        } else {
+            el.classList.remove('open');
+        }
+    }
+}
+
+function startScan() {
+    // Open scan area and immediately trigger camera
+    document.getElementById('scan-area').classList.add('open');
+    document.getElementById('manual-area').classList.remove('open');
+    document.getElementById('test-area').classList.remove('open');
+    document.getElementById('camera-input').click();
+}
+
+function newPuzzle() {
+    editor.size = 0;
+    editor.cages = [];
+    editor.selected.clear();
+    editor.errors = [];
+    editor.duplicates.clear();
+    editor.missing.clear();
+    editor.activeOp = '';
+    // Reset Module 1 sub-areas
+    ['scan', 'manual', 'test'].forEach(a => {
+        document.getElementById(a + '-area').classList.remove('open');
+    });
+    document.getElementById('scan-status').textContent = '';
+    document.getElementById('scan-preview').innerHTML = '';
+    // Reset Module 3
+    document.getElementById('solve-grid').innerHTML = '';
+    document.getElementById('solve-status').textContent = '';
+    document.getElementById('solve-status').className = '';
+    document.getElementById('solution-text').textContent = '';
+    showModule('module-load');
+}
+
+// ============================================================
+//  MODULE 1 HANDLERS
+// ============================================================
+function loadExample(name) {
+    const text = EXAMPLES[name];
+    if (!text) return;
+    try {
+        const { size, cages } = parsePuzzle(text);
+        openEditor(size, cages);
+    } catch (e) {
+        alert('Error loading example: ' + e.message);
+    }
+}
+
+function openEditorBlank(size) {
+    openEditor(size, []);
+}
+
+async function handlePhoto(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const scanStatus = document.getElementById('scan-status');
+    const scanPreview = document.getElementById('scan-preview');
+    // Keep scan area open so user sees progress
+    document.getElementById('scan-area').classList.add('open');
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        scanPreview.innerHTML = `<img class="photo-preview" src="${e.target.result}" alt="Puzzle photo">`;
+        scanStatus.textContent = 'Analyzing puzzle...';
+        scanStatus.style.color = '#aaa';
+
+        try {
+            const base64 = e.target.result.split(',')[1];
+            const mediaType = file.type || 'image/jpeg';
+
+            const resp = await fetch('/api/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: base64, mediaType })
+            });
+
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                throw new Error(err.error || `Server error (${resp.status})`);
+            }
+
+            const data = await resp.json();
+            const puzzleText = data.puzzle;
+
+            // Try strict parse first, fall back to lenient
+            let parsed;
+            try {
+                parsed = parsePuzzle(puzzleText);
+            } catch (e) {
+                parsed = parsePuzzleLenient(puzzleText);
+            }
+
+            if (!parsed) {
+                scanStatus.style.color = '#ff5252';
+                scanStatus.textContent = 'Could not parse puzzle from photo.';
+                return;
+            }
+
+            if (data.warning) {
+                scanStatus.style.color = '#ffb74d';
+                scanStatus.style.whiteSpace = 'pre-wrap';
+                scanStatus.textContent = 'Scan had issues \u2014 fix in editor below.';
+            } else {
+                scanStatus.style.color = '#4caf50';
+                scanStatus.textContent = 'Puzzle detected \u2014 opening editor.';
+            }
+
+            openEditor(parsed.size, parsed.cages);
+        } catch (err) {
+            scanStatus.style.color = '#ff5252';
+            if (err.message === 'Failed to fetch') {
+                scanStatus.textContent = 'Server not running. Start with: node server.js';
+            } else {
+                scanStatus.textContent = 'Error: ' + err.message;
+            }
+        }
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+}
+
+// ============================================================
+//  EDITOR INITIALIZATION
+// ============================================================
+function openEditor(size, cages) {
+    editor.size = size;
+    editor.cages = cages.map(c => ({
+        target: c.target,
+        op: c.op,
+        cells: c.cells.map(([r, cc]) => [r, cc])
+    }));
+    editor.selected.clear();
+    editor.activeOp = '';
+
+    // Reset toolbar
+    document.getElementById('cage-target').value = '';
+    document.querySelectorAll('.op-btn').forEach(b => b.classList.remove('active'));
+
+    validateEditor();
+    renderEditorGrid();
+    updateToolbar();
+    showModule('module-editor');
+}
+
+// ============================================================
+//  UTILITY FUNCTIONS
+// ============================================================
+function cageColor(ci) {
+    const hue = (ci * 137.508) % 360;
+    return `hsla(${hue}, 50%, 40%, 0.2)`;
+}
+
+function findCageIndex(r, c) {
+    for (let ci = 0; ci < editor.cages.length; ci++) {
+        for (const [cr, cc] of editor.cages[ci].cells) {
+            if (cr === r && cc === c) return ci;
+        }
+    }
+    return -1;
+}
+
+function cellCageIndices(r, c) {
+    const indices = [];
+    for (let ci = 0; ci < editor.cages.length; ci++) {
+        for (const [cr, cc] of editor.cages[ci].cells) {
+            if (cr === r && cc === c) { indices.push(ci); break; }
+        }
+    }
+    return indices;
+}
+
+// ============================================================
+//  EDITOR GRID RENDERING
+// ============================================================
+function renderEditorGrid() {
+    const size = editor.size;
+    const gridEl = document.getElementById('editor-grid');
+
+    // Build cage map (first cage index for each cell, for border logic)
+    const cageMap = new Int8Array(size * size).fill(-1);
+    for (let ci = 0; ci < editor.cages.length; ci++) {
+        for (const [r, c] of editor.cages[ci].cells) {
+            if (cageMap[r * size + c] === -1) {
+                cageMap[r * size + c] = ci;
+            }
+        }
+    }
+
+    // Find label cell for each cage (top-left cell)
+    const labelCell = new Map();
+    for (let ci = 0; ci < editor.cages.length; ci++) {
+        let bestR = size, bestC = size;
+        for (const [r, c] of editor.cages[ci].cells) {
+            if (r < bestR || (r === bestR && c < bestC)) { bestR = r; bestC = c; }
+        }
+        const { target, op } = editor.cages[ci];
+        const label = op === '=' ? String(target) : `${target}${op}`;
+        labelCell.set(bestR * size + bestC, label);
+    }
+
+    let html = '';
+    const sizeClass = size >= 7 ? ` eg-${size}` : '';
+    gridEl.className = 'editor-grid' + sizeClass;
+
+    for (let r = 0; r < size; r++) {
+        html += '<tr>';
+        for (let c = 0; c < size; c++) {
+            const ci = cageMap[r * size + c];
+            const key = `${r},${c}`;
+
+            // Border: thick if grid edge, different cage neighbor, or unassigned cell
+            const btC = (r === 0 || cageMap[(r-1)*size+c] !== ci || ci === -1) ? 'bt' : 'bt-thin';
+            const bbC = (r === size-1 || cageMap[(r+1)*size+c] !== ci || ci === -1) ? 'bb' : 'bb-thin';
+            const blC = (c === 0 || cageMap[r*size+c-1] !== ci || ci === -1) ? 'bl' : 'bl-thin';
+            const brC = (c === size-1 || cageMap[r*size+c+1] !== ci || ci === -1) ? 'br' : 'br-thin';
+
+            // Background
+            const bg = ci >= 0 ? cageColor(ci) : 'transparent';
+
+            // CSS classes
+            const classes = [btC, bbC, blC, brC];
+            if (editor.selected.has(key)) classes.push('cell-selected');
+            if (ci === -1) classes.push('cell-unassigned');
+            if (editor.duplicates.has(key)) classes.push('cell-error-dup');
+            if (editor.missing.has(key) && editor.cages.length > 0) classes.push('cell-error-missing');
+
+            const label = labelCell.get(r * size + c) || '';
+
+            html += `<td class="${classes.join(' ')}" style="background:${bg}" onclick="handleCellTap(${r},${c})">`;
+            if (label) html += `<span class="cage-label">${label}</span>`;
+            html += '</td>';
+        }
+        html += '</tr>';
+    }
+
+    gridEl.innerHTML = html;
+}
+
+// ============================================================
+//  CELL TAP HANDLING
+// ============================================================
+function handleCellTap(r, c) {
+    const key = `${r},${c}`;
+
+    if (editor.selected.size === 0) {
+        // Nothing selected — if cell is in a cage, select entire cage
+        const ci = findCageIndex(r, c);
+        if (ci >= 0) {
+            for (const [cr, cc] of editor.cages[ci].cells) {
+                editor.selected.add(`${cr},${cc}`);
+            }
+            // Pre-fill toolbar with cage info
+            editor.activeOp = editor.cages[ci].op === '=' ? '' : editor.cages[ci].op;
+            document.getElementById('cage-target').value = editor.cages[ci].target;
+            document.querySelectorAll('.op-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.op === editor.activeOp);
+            });
+        } else {
+            // Unassigned cell — just select it
+            editor.selected.add(key);
+        }
+    } else {
+        // Something selected — toggle this cell
+        if (editor.selected.has(key)) {
+            editor.selected.delete(key);
+        } else {
+            editor.selected.add(key);
+        }
+    }
+
+    updateToolbar();
+    renderEditorGrid();
+}
+
+// ============================================================
+//  TOOLBAR
+// ============================================================
+function updateToolbar() {
+    const info = document.getElementById('toolbar-info');
+    const btnCage = document.getElementById('btn-set-cage');
+    const btnGiven = document.getElementById('btn-set-given');
+
+    const count = editor.selected.size;
+
+    if (count === 0) {
+        info.textContent = 'Tap a cell to select it';
+        btnCage.disabled = true;
+        btnGiven.disabled = true;
+        return;
+    }
+
+    // Check if all selected cells are in the same cage
+    const firstKey = editor.selected.values().next().value;
+    const [fr, fc] = firstKey.split(',').map(Number);
+    const ci = findCageIndex(fr, fc);
+    let sameCage = ci >= 0;
+    if (sameCage) {
+        for (const key of editor.selected) {
+            const [r, c] = key.split(',').map(Number);
+            if (findCageIndex(r, c) !== ci) { sameCage = false; break; }
+        }
+    }
+
+    if (count === 1 && sameCage && ci >= 0) {
+        const cage = editor.cages[ci];
+        const opLabel = { '+': '+', '-': '\u2212', '*': '\u00d7', '/': '\u00f7', '=': '' }[cage.op] || cage.op;
+        info.textContent = `Cell (${fr+1},${fc+1}) \u2014 Cage: ${cage.target}${opLabel} (${cage.cells.length} cell${cage.cells.length>1?'s':''})`;
+    } else if (count === 1) {
+        info.textContent = `Cell (${fr+1},${fc+1}) \u2014 not in a cage`;
+    } else if (sameCage && ci >= 0) {
+        const cage = editor.cages[ci];
+        const opLabel = { '+': '+', '-': '\u2212', '*': '\u00d7', '/': '\u00f7', '=': '' }[cage.op] || cage.op;
+        info.textContent = `${count} cells selected \u2014 Cage: ${cage.target}${opLabel}`;
+    } else {
+        info.textContent = `${count} cells selected`;
+    }
+
+    updateToolbarButtons();
+}
+
+function updateToolbarButtons() {
+    const btnCage = document.getElementById('btn-set-cage');
+    const btnGiven = document.getElementById('btn-set-given');
+    const target = parseInt(document.getElementById('cage-target').value);
+    const count = editor.selected.size;
+
+    // Set Cage: 2+ cells, target set, op set
+    btnCage.disabled = !(count >= 2 && target > 0 && editor.activeOp);
+
+    // Set Given: exactly 1 cell, target between 1 and size
+    btnGiven.disabled = !(count === 1 && target >= 1 && target <= editor.size);
+}
+
+function setOp(op) {
+    editor.activeOp = (editor.activeOp === op) ? '' : op;
+    document.querySelectorAll('.op-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.op === editor.activeOp);
+    });
+    updateToolbarButtons();
+}
+
+// ============================================================
+//  CAGE OPERATIONS
+// ============================================================
+function setCage() {
+    const target = parseInt(document.getElementById('cage-target').value);
+    const op = editor.activeOp;
+    if (!target || !op || editor.selected.size < 2) return;
+
+    // Collect selected cells as [r,c] pairs
+    const cells = [];
+    for (const key of editor.selected) {
+        cells.push(key.split(',').map(Number));
+    }
+
+    // Sort cells top-to-bottom, left-to-right
+    cells.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+
+    // Remove selected cells from all existing cages
+    removeCellsFromCages(cells);
+
+    // Create new cage
+    editor.cages.push({ target, op, cells });
+
+    // Clear selection and re-render
+    editor.selected.clear();
+    editor.activeOp = '';
+    document.getElementById('cage-target').value = '';
+    document.querySelectorAll('.op-btn').forEach(b => b.classList.remove('active'));
+    validateEditor();
+    renderEditorGrid();
+    updateToolbar();
+}
+
+function setGiven() {
+    const target = parseInt(document.getElementById('cage-target').value);
+    if (!target || target < 1 || target > editor.size || editor.selected.size !== 1) return;
+
+    const key = editor.selected.values().next().value;
+    const cell = key.split(',').map(Number);
+
+    // Remove cell from existing cages
+    removeCellsFromCages([cell]);
+
+    // Create single-cell cage
+    editor.cages.push({ target, op: '=', cells: [cell] });
+
+    // Clear selection and re-render
+    editor.selected.clear();
+    editor.activeOp = '';
+    document.getElementById('cage-target').value = '';
+    document.querySelectorAll('.op-btn').forEach(b => b.classList.remove('active'));
+    validateEditor();
+    renderEditorGrid();
+    updateToolbar();
+}
+
+function selectWholeCage() {
+    if (editor.selected.size === 0) return;
+
+    const firstKey = editor.selected.values().next().value;
+    const [fr, fc] = firstKey.split(',').map(Number);
+    const ci = findCageIndex(fr, fc);
+    if (ci < 0) return;
+
+    // Add all cells from this cage to selection
+    const cage = editor.cages[ci];
+    for (const [r, c] of cage.cells) {
+        editor.selected.add(`${r},${c}`);
+    }
+
+    // Pre-fill toolbar
+    document.getElementById('cage-target').value = cage.target;
+    editor.activeOp = cage.op === '=' ? '' : cage.op;
+    document.querySelectorAll('.op-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.op === editor.activeOp);
+    });
+
+    updateToolbar();
+    renderEditorGrid();
+}
+
+function clearCage() {
+    if (editor.selected.size === 0) return;
+
+    const cells = [];
+    for (const key of editor.selected) {
+        cells.push(key.split(',').map(Number));
+    }
+
+    removeCellsFromCages(cells);
+
+    editor.selected.clear();
+    editor.activeOp = '';
+    document.getElementById('cage-target').value = '';
+    document.querySelectorAll('.op-btn').forEach(b => b.classList.remove('active'));
+    validateEditor();
+    renderEditorGrid();
+    updateToolbar();
+}
+
+function deselectAll() {
+    editor.selected.clear();
+    editor.activeOp = '';
+    document.getElementById('cage-target').value = '';
+    document.querySelectorAll('.op-btn').forEach(b => b.classList.remove('active'));
+    updateToolbar();
+    renderEditorGrid();
+}
+
+function removeCellsFromCages(cells) {
+    const removeSet = new Set(cells.map(([r, c]) => `${r},${c}`));
+
+    for (let ci = editor.cages.length - 1; ci >= 0; ci--) {
+        editor.cages[ci].cells = editor.cages[ci].cells.filter(
+            ([r, c]) => !removeSet.has(`${r},${c}`)
+        );
+        // Delete empty cages
+        if (editor.cages[ci].cells.length === 0) {
+            editor.cages.splice(ci, 1);
+        }
+    }
+}
+
+// ============================================================
+//  VALIDATION
+// ============================================================
+function validateEditor() {
+    const size = editor.size;
+    editor.errors = [];
+    editor.duplicates.clear();
+    editor.missing.clear();
+
+    // Count how many cages each cell belongs to
+    const cellCount = new Map();
+    for (let ci = 0; ci < editor.cages.length; ci++) {
+        for (const [r, c] of editor.cages[ci].cells) {
+            const key = `${r},${c}`;
+            cellCount.set(key, (cellCount.get(key) || 0) + 1);
+        }
+    }
+
+    // Find duplicates
+    for (const [key, count] of cellCount) {
+        if (count > 1) {
+            editor.duplicates.add(key);
+        }
+    }
+
+    // Find missing
+    for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+            if (!cellCount.has(`${r},${c}`)) {
+                editor.missing.add(`${r},${c}`);
+            }
+        }
+    }
+
+    // Check cage validity
+    for (let ci = 0; ci < editor.cages.length; ci++) {
+        const cage = editor.cages[ci];
+        if ((cage.op === '-' || cage.op === '/') && cage.cells.length !== 2) {
+            editor.errors.push(`Cage ${cage.target}${cage.op}: ${cage.op} requires exactly 2 cells (has ${cage.cells.length})`);
+        }
+    }
+
+    // Build error messages
+    if (editor.duplicates.size > 0) {
+        const dupList = [...editor.duplicates].map(k => {
+            const [r, c] = k.split(',').map(Number);
+            return `(${r+1},${c+1})`;
+        });
+        editor.errors.push(`${editor.duplicates.size} cell(s) in multiple cages: ${dupList.join(', ')}`);
+    }
+    if (editor.missing.size > 0 && editor.cages.length > 0) {
+        editor.errors.push(`${editor.missing.size} cell(s) not in any cage`);
+    }
+
+    // Update validation panel
+    const panel = document.getElementById('validation-panel');
+    const lockBtn = document.getElementById('btn-lock');
+
+    if (editor.cages.length === 0) {
+        panel.innerHTML = '<span style="color:#888">No cages defined yet \u2014 tap cells to create cages</span>';
+        lockBtn.disabled = true;
+    } else if (editor.errors.length === 0 && editor.missing.size === 0) {
+        panel.innerHTML = '<span class="validation-ok">\u2713 All ' + (size * size) + ' cells assigned \u2014 ready to lock</span>';
+        lockBtn.disabled = false;
+    } else {
+        let html = `<span class="validation-error">${editor.errors.length} issue(s):</span>`;
+        html += '<ul class="validation-list">';
+        for (const err of editor.errors) {
+            html += `<li>${err}</li>`;
+        }
+        html += '</ul>';
+        panel.innerHTML = html;
+        lockBtn.disabled = true;
+    }
+}
+
+// ============================================================
+//  LOCK & SOLVE
+// ============================================================
+function lockPuzzle() {
+    // Render the puzzle grid in Module 3 (without solution values)
+    renderSolveGrid(editor.size, editor.cages, null);
+    document.getElementById('solve-status').textContent = '';
+    document.getElementById('solve-status').className = '';
+    document.getElementById('solution-text').textContent = '';
+    showModule('module-solve');
+}
+
+function solvePuzzle() {
+    const statusEl = document.getElementById('solve-status');
+    const textEl = document.getElementById('solution-text');
+
+    statusEl.className = '';
+    statusEl.textContent = 'Solving...';
+    textEl.textContent = '';
+
+    setTimeout(() => {
+        try {
+            const t0 = performance.now();
+            const solver = new KenKenSolver(editor.size, editor.cages);
+            const solution = solver.solve();
+            const t1 = performance.now();
+
+            if (solution) {
+                statusEl.className = 'success';
+                statusEl.textContent = `Solved in ${(t1 - t0).toFixed(1)} ms`;
+                renderSolveGrid(editor.size, editor.cages, solution);
+
+                // Plain text output
+                let txt = '';
+                for (let r = 0; r < editor.size; r++) {
+                    txt += solution[r].join(' ') + '\n';
+                }
+                textEl.textContent = txt;
+            } else {
+                statusEl.className = 'error';
+                statusEl.textContent = 'No solution exists.';
+            }
+        } catch (e) {
+            statusEl.className = 'error';
+            statusEl.textContent = 'Error: ' + e.message;
+        }
+    }, 10);
+}
+
+function renderSolveGrid(size, cages, solution) {
+    const gridEl = document.getElementById('solve-grid');
+
+    // Build cage map
+    const cageMap = new Int8Array(size * size).fill(-1);
+    for (let ci = 0; ci < cages.length; ci++)
+        for (const [r, c] of cages[ci].cells)
+            cageMap[r * size + c] = ci;
+
+    // Find label cell for each cage (top-left)
+    const labelCell = new Map();
+    for (let ci = 0; ci < cages.length; ci++) {
+        let bestR = size, bestC = size;
+        for (const [r, c] of cages[ci].cells) {
+            if (r < bestR || (r === bestR && c < bestC)) { bestR = r; bestC = c; }
+        }
+        const { target, op } = cages[ci];
+        const label = op === '=' ? '' : `${target}${op}`;
+        labelCell.set(bestR * size + bestC, label);
+    }
+
+    let html = `<table class="kenken-grid${size >= 7 ? ' size-' + size : ''}">`;
+    for (let r = 0; r < size; r++) {
+        html += '<tr>';
+        for (let c = 0; c < size; c++) {
+            const ci = cageMap[r * size + c];
+            const bt = (r === 0 || cageMap[(r-1)*size+c] !== ci) ? 'bt' : 'bt-thin';
+            const bb = (r === size-1 || cageMap[(r+1)*size+c] !== ci) ? 'bb' : 'bb-thin';
+            const bl = (c === 0 || cageMap[r*size+c-1] !== ci) ? 'bl' : 'bl-thin';
+            const br = (c === size-1 || cageMap[r*size+c+1] !== ci) ? 'br' : 'br-thin';
+            const bg = cageColor(ci);
+            const label = labelCell.get(r * size + c) || '';
+            const val = solution ? solution[r][c] : '';
+            html += `<td class="${bt} ${bb} ${bl} ${br}" style="background:${bg}">`;
+            if (label) html += `<span class="cage-label">${label}</span>`;
+            html += val;
+            html += '</td>';
+        }
+        html += '</tr>';
+    }
+    html += '</table>';
+    gridEl.innerHTML = html;
+}
+
+function backToEditor() {
+    showModule('module-editor');
+}
+</script>
+</body>
+</html>

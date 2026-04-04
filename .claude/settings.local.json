@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(where:*)",
+      "Bash(npm install:*)",
+      "Bash(cmd.exe /c \"where npm\")",
+      "Bash(cmd.exe /c \"where node\")",
+      "Bash(cmd.exe /c \"npm --version\")",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs:/c/Users/JohnEvans/AppData/Roaming/npm\")",
+      "Bash(npm:*)",
+      "Bash(node --version:*)",
+      "Bash(\"/c/Program Files/nodejs/node.exe\" --version)",
+      "Bash(\"/c/Program Files/nodejs/node.exe\" server.js)",
+      "Bash(netstat:*)",
+      "Bash(cmd.exe /c \"netstat -ano | findstr :3000\")",
+      "Bash(cmd.exe /c \"taskkill /PID 29916 /F\")",
+      "Bash(taskkill:*)",
+      "Bash(curl:*)",
+      "Bash(ipconfig:*)",
+      "Bash(node:*)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\")"
+    ]
+  }
+}
