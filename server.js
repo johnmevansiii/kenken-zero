@@ -8,7 +8,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname)));
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'kenken.html'));
+    res.sendFile(path.join(__dirname, 'kenken-zero.html'));
 });
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });

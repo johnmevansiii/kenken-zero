@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>KenKen Solver</title>
+<title>KenKen Zero Puzzle Solver</title>
 <style>
   /* ============================================================
      BASE
@@ -11,37 +11,10 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background: #0f0f1a;
-    color: #e0e0e0;
+    background: #f5f0e8;
+    color: #2a2a3a;
     min-height: 100vh;
-    padding: 16px;
-  }
-  h1 {
-    text-align: center;
-    font-size: 1.5rem;
-    margin-bottom: 16px;
-    color: #fff;
-    letter-spacing: 0.5px;
-  }
-  .module {
-    max-width: 520px;
-    margin: 0 auto 24px;
-    display: none;
-  }
-  .module.active { display: block; }
-  .panel {
-    background: #1a1a2e;
-    border-radius: 10px;
-    padding: 20px;
-    border: 1px solid #2a2a4a;
-  }
-  .panel h2 {
-    font-size: 1rem;
-    color: #aaa;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 12px;
-    text-align: center;
+    padding: 0;
   }
   button {
     padding: 12px 20px;
@@ -56,56 +29,139 @@
   button:disabled { opacity: 0.4; cursor: not-allowed; }
 
   /* ============================================================
+     APP SHELL — TITLE + TABS + CONTENT
+     ============================================================ */
+  .app-shell {
+    max-width: 580px;
+    margin: 0 auto;
+  }
+  .app-title {
+    text-align: center;
+    font-size: 1.35rem;
+    color: #2a2a3a;
+    letter-spacing: 0.5px;
+    padding: 14px 16px 0;
+  }
+  .tab-bar {
+    display: flex;
+    padding: 12px 12px 0;
+    gap: 4px;
+  }
+  .tab {
+    flex: 1;
+    padding: 10px 6px;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #c0b8a8;
+    background: #ece6dc;
+    border: 1px solid #d4c8b8;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    cursor: default;
+    transition: all 0.15s;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .tab.enabled {
+    color: #8a8070;
+    background: #e8e0d4;
+    cursor: pointer;
+  }
+  .tab.enabled:hover {
+    color: #2d4a7a;
+    background: #f0ebe3;
+  }
+  .tab.active {
+    color: #2d4a7a;
+    background: #ffffff;
+    border-color: #d4c8b8;
+    cursor: default;
+  }
+  .tab-content {
+    background: #ffffff;
+    border: 1px solid #d4c8b8;
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    padding: 20px;
+    margin: 0 12px;
+    min-height: 200px;
+  }
+  .tab-panel {
+    display: none;
+  }
+  .tab-panel.active { display: block; }
+
+  /* ============================================================
      MODULE 1: LOAD PUZZLE
      ============================================================ */
-  .load-options {
-    display: flex;
-    flex-direction: column;
+  .load-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 12px;
   }
-  .option-card {
-    background: #222244;
-    border: 1px solid #333366;
+  .load-card {
+    background: #f0ebe3;
+    border: 1px solid #d4c8b8;
     border-radius: 8px;
-    padding: 16px;
+    padding: 20px 16px;
     cursor: pointer;
     transition: all 0.15s;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100px;
   }
-  .option-card:hover { background: #2a2a55; border-color: #4a4a88; }
-  .option-card h3 {
-    font-size: 1rem;
-    color: #fff;
+  .load-card:hover { background: #e8e0d4; border-color: #bfb3a0; }
+  .load-card:active { background: #ddd5c8; }
+  .load-card h3 {
+    font-size: 0.95rem;
+    color: #2d4a7a;
     margin-bottom: 4px;
   }
-  .option-card p {
-    font-size: 0.85rem;
-    color: #888;
+  .load-card p {
+    font-size: 0.8rem;
+    color: #6b6b7b;
     margin: 0;
   }
-  .option-sub {
+  .load-sub {
+    grid-column: 1 / -1;
+    background: #f7f3ec;
+    border: 1px solid #d4c8b8;
+    border-radius: 8px;
+    padding: 16px;
     display: none;
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid #333;
   }
-  .option-sub.open { display: block; }
+  .load-sub.open { display: block; }
+  .load-sub-label {
+    font-size: 0.85rem;
+    color: #6b6b7b;
+    margin-bottom: 10px;
+    text-align: center;
+  }
   .size-buttons, .example-buttons {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+    justify-content: center;
   }
   .size-buttons button, .example-buttons button {
-    background: #2a2a4a;
-    color: #bbb;
+    background: #2d4a7a;
+    color: #fff;
     padding: 10px 16px;
     font-size: 14px;
     min-width: 48px;
   }
   .size-buttons button:hover, .example-buttons button:hover {
-    background: #3a3a5a;
+    background: #3d6aaf;
     color: #fff;
   }
-  #camera-input { display: none; }
+  #camera-input, #library-input { display: none; }
+  .scan-feedback {
+    grid-column: 1 / -1;
+  }
   .photo-preview {
     max-width: 100%;
     max-height: 120px;
@@ -115,28 +171,28 @@
   }
   #scan-status {
     font-size: 13px;
-    color: #aaa;
+    color: #6b6b7b;
     margin-top: 8px;
   }
 
   /* ============================================================
      SHARED GRID STYLES (borders, labels)
      ============================================================ */
-  .bt { border-top: 3px solid #e0e0e0 !important; }
-  .bb { border-bottom: 3px solid #e0e0e0 !important; }
-  .bl { border-left: 3px solid #e0e0e0 !important; }
-  .br { border-right: 3px solid #e0e0e0 !important; }
-  .bt-thin { border-top: 1px solid #444 !important; }
-  .bb-thin { border-bottom: 1px solid #444 !important; }
-  .bl-thin { border-left: 1px solid #444 !important; }
-  .br-thin { border-right: 1px solid #444 !important; }
+  .bt { border-top: 3px solid #5a5060 !important; }
+  .bb { border-bottom: 3px solid #5a5060 !important; }
+  .bl { border-left: 3px solid #5a5060 !important; }
+  .br { border-right: 3px solid #5a5060 !important; }
+  .bt-thin { border-top: 1px solid #ccc0b0 !important; }
+  .bb-thin { border-bottom: 1px solid #ccc0b0 !important; }
+  .bl-thin { border-left: 1px solid #ccc0b0 !important; }
+  .br-thin { border-right: 1px solid #ccc0b0 !important; }
   .cage-label {
     position: absolute;
     top: 2px;
     left: 4px;
     font-size: 11px;
     font-weight: 600;
-    color: #ccc;
+    color: #6b6070;
     pointer-events: none;
   }
 
@@ -162,7 +218,7 @@
     vertical-align: middle;
     font-size: 0.85rem;
     font-weight: 600;
-    color: #888;
+    color: #2a2a3a;
     cursor: pointer;
     transition: background 0.1s;
   }
@@ -181,14 +237,14 @@
     left: 3px;
   }
   .cell-selected {
-    background: rgba(200, 210, 255, 0.35) !important;
-    outline: 2px solid #8aafff;
+    background: rgba(45, 74, 122, 0.2) !important;
+    outline: 2px solid #2d4a7a;
     outline-offset: -2px;
     z-index: 1;
     position: relative;
   }
   .cell-unassigned {
-    background: #1a1a2a !important;
+    background: #f0ebe3 !important;
   }
   .cell-error-dup {
     box-shadow: inset 0 0 12px rgba(255, 50, 50, 0.6);
@@ -199,15 +255,14 @@
 
   /* Cage toolbar */
   .cage-toolbar {
-    background: #16162e;
-    border: 1px solid #2a2a4a;
+    background: #f7f3ec;
+    border: 1px solid #d4c8b8;
     border-radius: 8px;
     padding: 12px;
-    margin-bottom: 12px;
   }
   .toolbar-info {
     font-size: 13px;
-    color: #aaa;
+    color: #6b6b7b;
     margin-bottom: 8px;
     min-height: 20px;
   }
@@ -221,35 +276,35 @@
   .toolbar-row:last-child { margin-bottom: 0; }
   .toolbar-label {
     font-size: 13px;
-    color: #888;
+    color: #6b6b7b;
   }
   .toolbar-input {
     width: 64px;
     padding: 6px 8px;
-    background: #12122a;
-    color: #e0e0e0;
-    border: 1px solid #333;
+    background: #ffffff;
+    color: #2a2a3a;
+    border: 1px solid #d4c8b8;
     border-radius: 4px;
     font-size: 14px;
     text-align: center;
   }
-  .toolbar-input:focus { outline: none; border-color: #5a5aff; }
+  .toolbar-input:focus { outline: none; border-color: #2d4a7a; }
   .toolbar-input::-webkit-inner-spin-button,
   .toolbar-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   .toolbar-input { -moz-appearance: textfield; }
   .op-btn {
     padding: 8px 14px;
-    background: #2a2a4a;
-    color: #bbb;
-    border: 1px solid #333;
+    background: #e8e0d4;
+    color: #2a2a3a;
+    border: 1px solid #d4c8b8;
     border-radius: 4px;
     font-size: 16px;
     font-weight: 700;
     min-height: 36px;
     min-width: 40px;
   }
-  .op-btn:hover { background: #3a3a5a; color: #fff; }
-  .op-btn.active { background: #4a4aff; color: #fff; border-color: #5a5aff; }
+  .op-btn:hover { background: #ddd5c8; color: #2a2a3a; }
+  .op-btn.active { background: #2d4a7a; color: #fff; border-color: #2d4a7a; }
   .btn-action {
     padding: 8px 14px;
     background: #2d6a4f;
@@ -260,48 +315,55 @@
   .btn-action:hover:not(:disabled) { background: #40916c; }
   .btn-secondary {
     padding: 8px 14px;
-    background: #2a2a4a;
-    color: #bbb;
+    background: #e8e0d4;
+    color: #2a2a3a;
     font-size: 13px;
     min-height: 36px;
   }
-  .btn-secondary:hover { background: #3a3a5a; color: #fff; }
+  .btn-secondary:hover { background: #ddd5c8; color: #2a2a3a; }
   .btn-danger {
     padding: 8px 14px;
-    background: #6a2d2d;
+    background: #c04a3a;
     color: #fff;
     font-size: 13px;
     min-height: 36px;
   }
-  .btn-danger:hover { background: #8a3a3a; }
+  .btn-danger:hover { background: #d05a4a; }
 
   /* Validation panel */
   .validation-panel {
-    background: #16162e;
-    border: 1px solid #2a2a4a;
+    background: #f7f3ec;
+    border: 1px solid #d4c8b8;
     border-radius: 8px;
     padding: 12px;
-    margin-bottom: 12px;
     font-size: 13px;
   }
-  .validation-ok { color: #4caf50; }
-  .validation-error { color: #ff8a65; }
+  .validation-ok { color: #2d6a4f; }
+  .validation-error { color: #c04a3a; }
   .validation-list {
     margin-top: 6px;
     padding-left: 16px;
-    color: #ff8a65;
+    color: #c04a3a;
     list-style-type: disc;
   }
   .validation-list li { margin-bottom: 2px; }
 
   .btn-lock {
-    background: #4a4aff;
+    background: #2d4a7a;
     color: #fff;
     width: 100%;
     font-size: 16px;
     padding: 14px;
+    margin-bottom: 12px;
   }
-  .btn-lock:hover:not(:disabled) { background: #5c5cff; }
+  .btn-lock:hover:not(:disabled) { background: #3d6aaf; }
+
+  .editor-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: stretch;
+  }
 
   /* ============================================================
      MODULE 3: SOLVE
@@ -323,7 +385,7 @@
     vertical-align: middle;
     font-size: 1.4rem;
     font-weight: 700;
-    color: #fff;
+    color: #2a2a3a;
   }
   .kenken-grid.size-7 td,
   .kenken-grid.size-8 td,
@@ -339,49 +401,31 @@
     top: 1px;
     left: 3px;
   }
-  .btn-solve {
-    background: #4a4aff;
-    color: #fff;
-    width: 100%;
-    font-size: 16px;
-    padding: 14px;
-    margin-bottom: 12px;
-  }
-  .btn-solve:hover { background: #5c5cff; }
   #solve-status {
     font-size: 14px;
     text-align: center;
     min-height: 20px;
     margin-bottom: 8px;
   }
-  #solve-status.success { color: #4caf50; }
-  #solve-status.error { color: #ff5252; }
+  #solve-status.success { color: #2d6a4f; }
+  #solve-status.error { color: #c04a3a; }
   #solution-text {
     font-family: 'Consolas', 'Courier New', monospace;
     font-size: 13px;
-    color: #aaa;
+    color: #6b6b7b;
     white-space: pre;
     text-align: center;
     margin-top: 8px;
   }
-  .btn-back {
-    background: #2a2a4a;
-    color: #bbb;
-    width: 100%;
-    font-size: 14px;
-    padding: 12px;
-    margin-top: 12px;
-  }
-  .btn-back:hover { background: #3a3a5a; color: #fff; }
-
   /* ============================================================
      MOBILE RESPONSIVE
      ============================================================ */
   @media (max-width: 768px) {
-    body { padding: 10px; }
-    h1 { font-size: 1.3rem; margin-bottom: 12px; }
-    .module { max-width: 100%; margin-bottom: 16px; }
-    .panel { padding: 14px; }
+    .app-title { font-size: 1.15rem; padding-top: 10px; }
+    .tab-bar { padding: 10px 8px 0; }
+    .tab { font-size: 0.8rem; padding: 9px 4px; }
+    .tab-content { margin: 0 8px; padding: 14px; }
+    .editor-columns { grid-template-columns: 1fr; }
     .editor-grid td {
       width: 44px;
       height: 44px;
@@ -410,101 +454,111 @@
 </head>
 <body>
 
-<h1>KenKen Solver</h1>
+<div class="app-shell">
+  <h1 class="app-title">KenKen Zero Puzzle Solver</h1>
 
-<!-- MODULE 1: LOAD PUZZLE -->
-<div id="module-load" class="module active">
-  <div class="panel">
-    <h2>Load Puzzle</h2>
-    <div class="load-options">
-      <div class="option-card" id="card-scan" onclick="startScan()">
-        <h3>Scan Puzzle Photo</h3>
-        <p>Take a photo or upload an image of a KenKen puzzle</p>
-        <div id="scan-area" class="option-sub">
-          <input type="file" id="camera-input" accept="image/*" capture="environment" onchange="handlePhoto(this)">
-          <div id="scan-preview"></div>
-          <div id="scan-status"></div>
+  <div class="tab-bar">
+    <div class="tab active enabled" data-tab="tab-new" onclick="switchTab('tab-new')">New Puzzle</div>
+    <div class="tab" data-tab="tab-editor" onclick="switchTab('tab-editor')">Editor</div>
+    <div class="tab" data-tab="tab-solution" onclick="switchTab('tab-solution')">Solution</div>
+  </div>
+
+  <div class="tab-content">
+    <input type="file" id="camera-input" accept="image/*" capture="environment" onchange="handlePhoto(this)">
+    <input type="file" id="library-input" accept="image/*" onchange="handlePhoto(this)">
+
+    <!-- TAB: NEW PUZZLE -->
+    <div id="tab-new" class="tab-panel active">
+      <div class="load-grid">
+        <div class="load-card" onclick="triggerCamera()">
+          <h3>Scan Photo</h3>
+          <p>Take a picture of a puzzle</p>
         </div>
-      </div>
-      <div class="option-card" id="card-manual" onclick="toggleOption('manual')">
-        <h3>Manual Input</h3>
-        <p>Build a puzzle from scratch by selecting cells and defining cages</p>
-        <div id="manual-area" class="option-sub">
+        <div class="load-card" onclick="triggerLibrary()">
+          <h3>Load Photo</h3>
+          <p>Choose a puzzle from photo library</p>
+        </div>
+        <div class="load-card" id="card-manual" onclick="toggleOption('manual')">
+          <h3>Manual Input</h3>
+          <p>Build a puzzle from scratch</p>
+        </div>
+        <div class="load-card" id="card-test" onclick="toggleOption('test')">
+          <h3>Test Puzzle</h3>
+          <p>Load a built-in example</p>
+        </div>
+        <div id="manual-area" class="load-sub">
+          <div class="load-sub-label">Select grid size</div>
           <div class="size-buttons">
-            <button onclick="event.stopPropagation(); openEditorBlank(3)">3</button>
-            <button onclick="event.stopPropagation(); openEditorBlank(4)">4</button>
-            <button onclick="event.stopPropagation(); openEditorBlank(5)">5</button>
-            <button onclick="event.stopPropagation(); openEditorBlank(6)">6</button>
-            <button onclick="event.stopPropagation(); openEditorBlank(7)">7</button>
-            <button onclick="event.stopPropagation(); openEditorBlank(8)">8</button>
-            <button onclick="event.stopPropagation(); openEditorBlank(9)">9</button>
+            <button onclick="openEditorBlank(3)">3</button>
+            <button onclick="openEditorBlank(4)">4</button>
+            <button onclick="openEditorBlank(5)">5</button>
+            <button onclick="openEditorBlank(6)">6</button>
+            <button onclick="openEditorBlank(7)">7</button>
+            <button onclick="openEditorBlank(8)">8</button>
+            <button onclick="openEditorBlank(9)">9</button>
           </div>
         </div>
-      </div>
-      <div class="option-card" id="card-test" onclick="toggleOption('test')">
-        <h3>Test Puzzle</h3>
-        <p>Load a built-in example puzzle to try out the editor</p>
-        <div id="test-area" class="option-sub">
+        <div id="test-area" class="load-sub">
+          <div class="load-sub-label">Select example puzzle</div>
           <div class="example-buttons">
-            <button onclick="event.stopPropagation(); loadExample('3x3')">3x3</button>
-            <button onclick="event.stopPropagation(); loadExample('4x4')">4x4</button>
-            <button onclick="event.stopPropagation(); loadExample('5x5')">5x5</button>
-            <button onclick="event.stopPropagation(); loadExample('6x6')">6x6</button>
-            <button onclick="event.stopPropagation(); loadExample('7x7')">7x7</button>
-            <button onclick="event.stopPropagation(); loadExample('8x8')">8x8</button>
-            <button onclick="event.stopPropagation(); loadExample('9x9')">9x9</button>
+            <button onclick="loadExample('3x3')">3x3</button>
+            <button onclick="loadExample('4x4')">4x4</button>
+            <button onclick="loadExample('5x5')">5x5</button>
+            <button onclick="loadExample('6x6')">6x6</button>
+            <button onclick="loadExample('7x7')">7x7</button>
+            <button onclick="loadExample('8x8')">8x8</button>
+            <button onclick="loadExample('9x9')">9x9</button>
           </div>
         </div>
+        <div id="scan-preview" class="scan-feedback"></div>
+        <div id="scan-status" class="scan-feedback"></div>
       </div>
     </div>
-  </div>
-</div>
 
-<!-- MODULE 2: PUZZLE EDITOR -->
-<div id="module-editor" class="module">
-  <div class="panel">
-    <h2>Puzzle Editor</h2>
-    <div class="editor-grid-wrap">
-      <table id="editor-grid" class="editor-grid"></table>
+    <!-- TAB: EDITOR -->
+    <div id="tab-editor" class="tab-panel">
+      <div class="editor-grid-wrap">
+        <table id="editor-grid" class="editor-grid"></table>
+      </div>
+      <button class="btn-lock" id="btn-lock" onclick="solvePuzzle()" disabled>Solve Puzzle</button>
+      <div class="editor-columns">
+        <div class="cage-toolbar">
+          <div class="toolbar-info" id="toolbar-info">Tap a cell to select it</div>
+          <div class="toolbar-row">
+            <span class="toolbar-label">Target:</span>
+            <input type="number" id="cage-target" class="toolbar-input" min="1" max="999" placeholder="#" oninput="updateToolbarButtons()" onfocus="this.select()">
+          </div>
+          <div class="toolbar-row">
+            <span class="toolbar-label">Op:</span>
+            <button class="op-btn" data-op="+" onclick="setOp('+')">+</button>
+            <button class="op-btn" data-op="-" onclick="setOp('-')">&#8722;</button>
+            <button class="op-btn" data-op="*" onclick="setOp('*')">&#215;</button>
+            <button class="op-btn" data-op="/" onclick="setOp('/')">&#247;</button>
+          </div>
+          <div class="toolbar-row">
+            <button class="btn-action" id="btn-set-cage" onclick="setCage()" disabled>Set Cage</button>
+            <button class="btn-action" id="btn-set-given" onclick="setGiven()" disabled>Set Given</button>
+          </div>
+          <div class="toolbar-row">
+            <button class="btn-secondary" onclick="selectWholeCage()">Select Cage</button>
+            <button class="btn-secondary" onclick="deselectAll()">Deselect</button>
+          </div>
+          <div class="toolbar-row">
+            <button class="btn-danger" onclick="clearCage()">Clear Cage</button>
+          </div>
+        </div>
+        <div class="validation-panel" id="validation-panel"></div>
+      </div>
     </div>
-    <div class="cage-toolbar">
-      <div class="toolbar-info" id="toolbar-info">Tap a cell to select it</div>
-      <div class="toolbar-row">
-        <span class="toolbar-label">Target:</span>
-        <input type="number" id="cage-target" class="toolbar-input" min="1" max="999" placeholder="#" oninput="updateToolbarButtons()" onfocus="this.select()">
-        <span class="toolbar-label" style="margin-left:4px">Op:</span>
-        <button class="op-btn" data-op="+" onclick="setOp('+')">+</button>
-        <button class="op-btn" data-op="-" onclick="setOp('-')">&#8722;</button>
-        <button class="op-btn" data-op="*" onclick="setOp('*')">&#215;</button>
-        <button class="op-btn" data-op="/" onclick="setOp('/')">&#247;</button>
-      </div>
-      <div class="toolbar-row">
-        <button class="btn-action" id="btn-set-cage" onclick="setCage()" disabled>Set Cage</button>
-        <button class="btn-action" id="btn-set-given" onclick="setGiven()" disabled>Set Given</button>
-      </div>
-      <div class="toolbar-row">
-        <button class="btn-secondary" onclick="selectWholeCage()">Select Cage</button>
-        <button class="btn-danger" onclick="clearCage()">Clear Cage</button>
-        <button class="btn-secondary" onclick="deselectAll()">Deselect</button>
-      </div>
-    </div>
-    <div class="validation-panel" id="validation-panel"></div>
-    <button class="btn-lock" id="btn-lock" onclick="lockPuzzle()" disabled>Lock Puzzle</button>
-    <button class="btn-back" onclick="newPuzzle()">&#8592; New Puzzle</button>
-  </div>
-</div>
 
-<!-- MODULE 3: SOLVE -->
-<div id="module-solve" class="module">
-  <div class="panel">
-    <h2>Solution</h2>
-    <div class="solve-grid-wrap">
-      <div id="solve-grid"></div>
+    <!-- TAB: SOLUTION -->
+    <div id="tab-solution" class="tab-panel">
+      <div class="solve-grid-wrap">
+        <div id="solve-grid"></div>
+      </div>
+      <div id="solve-status"></div>
+      <div id="solution-text"></div>
     </div>
-    <button class="btn-solve" onclick="solvePuzzle()">Solve</button>
-    <div id="solve-status"></div>
-    <div id="solution-text"></div>
-    <button class="btn-back" onclick="backToEditor()">&#8592; Back to Editor</button>
   </div>
 </div>
 
@@ -1196,14 +1250,41 @@ const editor = {
 // ============================================================
 //  MODULE TRANSITIONS
 // ============================================================
-function showModule(id) {
-    document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    document.getElementById(id).scrollIntoView({ behavior: 'smooth', block: 'start' });
+// Tab names that map to old module IDs for internal calls
+const TAB_MAP = {
+    'module-load': 'tab-new',
+    'module-editor': 'tab-editor',
+    'module-solve': 'tab-solution'
+};
+
+function switchTab(tabId) {
+    const tab = document.querySelector(`.tab[data-tab="${tabId}"]`);
+    if (!tab || (!tab.classList.contains('enabled') && !tab.classList.contains('active'))) return;
+
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+}
+
+function enableTab(tabId) {
+    document.querySelector(`.tab[data-tab="${tabId}"]`).classList.add('enabled');
+}
+
+function disableTab(tabId) {
+    const tab = document.querySelector(`.tab[data-tab="${tabId}"]`);
+    tab.classList.remove('enabled');
+}
+
+// Compatibility wrapper for old showModule calls
+function showModule(oldId) {
+    const tabId = TAB_MAP[oldId] || oldId;
+    switchTab(tabId);
 }
 
 function toggleOption(name) {
-    const areas = ['scan', 'manual', 'test'];
+    const areas = ['manual', 'test'];
     for (const a of areas) {
         const el = document.getElementById(a + '-area');
         if (a === name) {
@@ -1214,12 +1295,18 @@ function toggleOption(name) {
     }
 }
 
-function startScan() {
-    // Open scan area and immediately trigger camera
-    document.getElementById('scan-area').classList.add('open');
-    document.getElementById('manual-area').classList.remove('open');
-    document.getElementById('test-area').classList.remove('open');
+function closeSubPanels() {
+    ['manual', 'test'].forEach(a => document.getElementById(a + '-area').classList.remove('open'));
+}
+
+function triggerCamera() {
+    closeSubPanels();
     document.getElementById('camera-input').click();
+}
+
+function triggerLibrary() {
+    closeSubPanels();
+    document.getElementById('library-input').click();
 }
 
 function newPuzzle() {
@@ -1230,18 +1317,21 @@ function newPuzzle() {
     editor.duplicates.clear();
     editor.missing.clear();
     editor.activeOp = '';
-    // Reset Module 1 sub-areas
-    ['scan', 'manual', 'test'].forEach(a => {
+    // Reset sub-areas
+    ['manual', 'test'].forEach(a => {
         document.getElementById(a + '-area').classList.remove('open');
     });
     document.getElementById('scan-status').textContent = '';
     document.getElementById('scan-preview').innerHTML = '';
-    // Reset Module 3
+    // Reset solution
     document.getElementById('solve-grid').innerHTML = '';
     document.getElementById('solve-status').textContent = '';
     document.getElementById('solve-status').className = '';
     document.getElementById('solution-text').textContent = '';
-    showModule('module-load');
+    // Disable editor/solution tabs
+    disableTab('tab-editor');
+    disableTab('tab-solution');
+    switchTab('tab-new');
 }
 
 // ============================================================
@@ -1352,7 +1442,9 @@ function openEditor(size, cages) {
     validateEditor();
     renderEditorGrid();
     updateToolbar();
-    showModule('module-editor');
+    enableTab('tab-editor');
+    disableTab('tab-solution');
+    switchTab('tab-editor');
 }
 
 // ============================================================
@@ -1360,7 +1452,7 @@ function openEditor(size, cages) {
 // ============================================================
 function cageColor(ci) {
     const hue = (ci * 137.508) % 360;
-    return `hsla(${hue}, 50%, 40%, 0.2)`;
+    return `hsla(${hue}, 45%, 85%, 0.5)`;
 }
 
 function findCageIndex(r, c) {
@@ -1737,7 +1829,7 @@ function validateEditor() {
         panel.innerHTML = '<span style="color:#888">No cages defined yet \u2014 tap cells to create cages</span>';
         lockBtn.disabled = true;
     } else if (editor.errors.length === 0 && editor.missing.size === 0) {
-        panel.innerHTML = '<span class="validation-ok">\u2713 All ' + (size * size) + ' cells assigned \u2014 ready to lock</span>';
+        panel.innerHTML = '<span class="validation-ok">\u2713 All ' + (size * size) + ' cells assigned \u2014 ready to solve</span>';
         lockBtn.disabled = false;
     } else {
         let html = `<span class="validation-error">${editor.errors.length} issue(s):</span>`;
@@ -1754,22 +1846,11 @@ function validateEditor() {
 // ============================================================
 //  LOCK & SOLVE
 // ============================================================
-function lockPuzzle() {
-    // Render the puzzle grid in Module 3 (without solution values)
-    renderSolveGrid(editor.size, editor.cages, null);
-    document.getElementById('solve-status').textContent = '';
-    document.getElementById('solve-status').className = '';
-    document.getElementById('solution-text').textContent = '';
-    showModule('module-solve');
-}
-
 function solvePuzzle() {
-    const statusEl = document.getElementById('solve-status');
-    const textEl = document.getElementById('solution-text');
+    const panel = document.getElementById('validation-panel');
 
-    statusEl.className = '';
-    statusEl.textContent = 'Solving...';
-    textEl.textContent = '';
+    // Show solving feedback in the editor
+    panel.innerHTML = '<span style="color:#aaa">Solving...</span>';
 
     setTimeout(() => {
         try {
@@ -1779,23 +1860,25 @@ function solvePuzzle() {
             const t1 = performance.now();
 
             if (solution) {
+                // Success — go to solution view
+                const statusEl = document.getElementById('solve-status');
+                const textEl = document.getElementById('solution-text');
                 statusEl.className = 'success';
                 statusEl.textContent = `Solved in ${(t1 - t0).toFixed(1)} ms`;
                 renderSolveGrid(editor.size, editor.cages, solution);
 
-                // Plain text output
                 let txt = '';
                 for (let r = 0; r < editor.size; r++) {
                     txt += solution[r].join(' ') + '\n';
                 }
                 textEl.textContent = txt;
+                enableTab('tab-solution');
+                switchTab('tab-solution');
             } else {
-                statusEl.className = 'error';
-                statusEl.textContent = 'No solution exists.';
+                panel.innerHTML = '<span class="validation-error">No solution exists. Check your cage definitions.</span>';
             }
         } catch (e) {
-            statusEl.className = 'error';
-            statusEl.textContent = 'Error: ' + e.message;
+            panel.innerHTML = `<span class="validation-error">Error: ${e.message}</span>`;
         }
     }, 10);
 }
@@ -1845,7 +1928,7 @@ function renderSolveGrid(size, cages, solution) {
 }
 
 function backToEditor() {
-    showModule('module-editor');
+    switchTab('tab-editor');
 }
 </script>
 </body>

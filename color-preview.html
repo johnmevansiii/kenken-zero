@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Color Scheme Preview</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #e8e8e8;
+    padding: 20px;
+  }
+  h1 { text-align: center; margin-bottom: 24px; font-size: 1.4rem; color: #333; }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  @media (max-width: 700px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+  .scheme-label {
+    font-size: 1rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  /* Each mockup */
+  .mockup {
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+  .mock-body { padding: 14px; }
+  .mock-title {
+    text-align: center;
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .mock-tabs {
+    display: flex;
+    gap: 3px;
+    margin-bottom: 0;
+  }
+  .mock-tab {
+    flex: 1;
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 7px 4px;
+    border-radius: 6px 6px 0 0;
+  }
+  .mock-content {
+    border-radius: 0 0 8px 8px;
+    padding: 12px;
+  }
+  .mock-card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .mock-card {
+    border-radius: 6px;
+    padding: 12px 8px;
+    text-align: center;
+  }
+  .mock-card h3 { font-size: 0.75rem; margin-bottom: 2px; }
+  .mock-card p { font-size: 0.6rem; margin: 0; }
+  .mock-sub {
+    grid-column: 1 / -1;
+    border-radius: 6px;
+    padding: 8px;
+    text-align: center;
+    font-size: 0.65rem;
+  }
+  .mock-sub-btns {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    margin-top: 6px;
+  }
+  .mock-sub-btn {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.6rem;
+    font-weight: 600;
+  }
+
+  /* Solution grid mockups */
+  .mock-grid-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+  }
+  .mock-grid {
+    border-collapse: collapse;
+  }
+  .mock-solve-status {
+    text-align: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .s1 .mock-solve-status.s-success { color: #2d6a4f; }
+  .s2 .mock-solve-status.s-success { color: #0d9488; }
+  .s3 .mock-solve-status.s-success { color: #4a9a5b; }
+  .s4 .mock-solve-status.s-success { color: #c04a3a; }
+
+  /* ===== SCHEME 1: Cream & Navy ===== */
+  .s1 .mock-body { background: #f5f0e8; }
+  .s1 .mock-title { color: #2a2a3a; }
+  .s1 .mock-tab { background: #e8e0d4; color: #8a8070; border: 1px solid #d4c8b8; border-bottom: none; }
+  .s1 .mock-tab.active { background: #ffffff; color: #2d4a7a; border-color: #d4c8b8; }
+  .s1 .mock-tab.disabled { color: #c0b8a8; background: #ece6dc; }
+  .s1 .mock-content { background: #ffffff; border: 1px solid #d4c8b8; border-top: none; }
+  .s1 .mock-card { background: #f0ebe3; border: 1px solid #d4c8b8; }
+  .s1 .mock-card h3 { color: #2d4a7a; }
+  .s1 .mock-card p { color: #6b6b7b; }
+  .s1 .mock-sub { background: #f7f3ec; border: 1px solid #d4c8b8; color: #6b6b7b; }
+  .s1 .mock-sub-btn { background: #2d4a7a; color: #fff; }
+
+  /* ===== SCHEME 2: Slate & Teal ===== */
+  .s2 .mock-body { background: #eef1f5; }
+  .s2 .mock-title { color: #1e293b; }
+  .s2 .mock-tab { background: #dde3ec; color: #8494a7; border: 1px solid #cdd5df; border-bottom: none; }
+  .s2 .mock-tab.active { background: #ffffff; color: #0d9488; border-color: #cdd5df; }
+  .s2 .mock-tab.disabled { color: #b4c0cf; background: #e4e8ee; }
+  .s2 .mock-content { background: #ffffff; border: 1px solid #cdd5df; border-top: none; }
+  .s2 .mock-card { background: #e8eef5; border: 1px solid #cdd5df; }
+  .s2 .mock-card h3 { color: #0d9488; }
+  .s2 .mock-card p { color: #64748b; }
+  .s2 .mock-sub { background: #f0f4f8; border: 1px solid #cdd5df; color: #64748b; }
+  .s2 .mock-sub-btn { background: #0d9488; color: #fff; }
+
+  /* ===== SCHEME 3: Lavender & Indigo ===== */
+  .s3 .mock-body { background: #f0eef5; }
+  .s3 .mock-title { color: #2d2b3d; }
+  .s3 .mock-tab { background: #e0dcea; color: #9490a8; border: 1px solid #d0cce0; border-bottom: none; }
+  .s3 .mock-tab.active { background: #ffffff; color: #5b4fc4; border-color: #d0cce0; }
+  .s3 .mock-tab.disabled { color: #c0bcce; background: #e6e3ee; }
+  .s3 .mock-content { background: #ffffff; border: 1px solid #d0cce0; border-top: none; }
+  .s3 .mock-card { background: #eae7f2; border: 1px solid #d0cce0; }
+  .s3 .mock-card h3 { color: #5b4fc4; }
+  .s3 .mock-card p { color: #7a7890; }
+  .s3 .mock-sub { background: #f2f0f8; border: 1px solid #d0cce0; color: #7a7890; }
+  .s3 .mock-sub-btn { background: #5b4fc4; color: #fff; }
+
+  /* ===== SCHEME 4: Warm White & Coral ===== */
+  .s4 .mock-body { background: #faf7f5; }
+  .s4 .mock-title { color: #3a3330; }
+  .s4 .mock-tab { background: #f0e8e2; color: #a09088; border: 1px solid #e5ddd5; border-bottom: none; }
+  .s4 .mock-tab.active { background: #ffffff; color: #d05545; border-color: #e5ddd5; }
+  .s4 .mock-tab.disabled { color: #ccc0b8; background: #f2ece8; }
+  .s4 .mock-content { background: #ffffff; border: 1px solid #e5ddd5; border-top: none; }
+  .s4 .mock-card { background: #f5eeea; border: 1px solid #e5ddd5; }
+  .s4 .mock-card h3 { color: #d05545; }
+  .s4 .mock-card p { color: #8a8078; }
+  .s4 .mock-sub { background: #faf5f2; border: 1px solid #e5ddd5; color: #8a8078; }
+  .s4 .mock-sub-btn { background: #d05545; color: #fff; }
+</style>
+</head>
+<body>
+
+<h1>Color Scheme Previews</h1>
+
+<div class="grid">
+
+  <!-- Scheme 1 -->
+  <div>
+    <div class="scheme-label">1. Soft Cream &amp; Navy</div>
+    <div class="mockup s1">
+      <div class="mock-body">
+        <div class="mock-title">KenKen Zero Puzzle Solver</div>
+        <div class="mock-tabs">
+          <div class="mock-tab active">New Puzzle</div>
+          <div class="mock-tab disabled">Editor</div>
+          <div class="mock-tab disabled">Solution</div>
+        </div>
+        <div class="mock-content">
+          <div class="mock-card-grid">
+            <div class="mock-card"><h3>Scan Photo</h3><p>Take a picture of a puzzle</p></div>
+            <div class="mock-card"><h3>Load Photo</h3><p>Choose from photo library</p></div>
+            <div class="mock-card"><h3>Manual Input</h3><p>Build a puzzle from scratch</p></div>
+            <div class="mock-card"><h3>Test Puzzle</h3><p>Load a built-in example</p></div>
+            <div class="mock-sub">
+              Select grid size
+              <div class="mock-sub-btns">
+                <div class="mock-sub-btn">3</div>
+                <div class="mock-sub-btn">4</div>
+                <div class="mock-sub-btn">5</div>
+                <div class="mock-sub-btn">6</div>
+                <div class="mock-sub-btn">7</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scheme 2 -->
+  <div>
+    <div class="scheme-label">2. Cool Slate &amp; Teal</div>
+    <div class="mockup s2">
+      <div class="mock-body">
+        <div class="mock-title">KenKen Zero Puzzle Solver</div>
+        <div class="mock-tabs">
+          <div class="mock-tab active">New Puzzle</div>
+          <div class="mock-tab disabled">Editor</div>
+          <div class="mock-tab disabled">Solution</div>
+        </div>
+        <div class="mock-content">
+          <div class="mock-card-grid">
+            <div class="mock-card"><h3>Scan Photo</h3><p>Take a picture of a puzzle</p></div>
+            <div class="mock-card"><h3>Load Photo</h3><p>Choose from photo library</p></div>
+            <div class="mock-card"><h3>Manual Input</h3><p>Build a puzzle from scratch</p></div>
+            <div class="mock-card"><h3>Test Puzzle</h3><p>Load a built-in example</p></div>
+            <div class="mock-sub">
+              Select grid size
+              <div class="mock-sub-btns">
+                <div class="mock-sub-btn">3</div>
+                <div class="mock-sub-btn">4</div>
+                <div class="mock-sub-btn">5</div>
+                <div class="mock-sub-btn">6</div>
+                <div class="mock-sub-btn">7</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scheme 3 -->
+  <div>
+    <div class="scheme-label">3. Lavender &amp; Indigo</div>
+    <div class="mockup s3">
+      <div class="mock-body">
+        <div class="mock-title">KenKen Zero Puzzle Solver</div>
+        <div class="mock-tabs">
+          <div class="mock-tab active">New Puzzle</div>
+          <div class="mock-tab disabled">Editor</div>
+          <div class="mock-tab disabled">Solution</div>
+        </div>
+        <div class="mock-content">
+          <div class="mock-card-grid">
+            <div class="mock-card"><h3>Scan Photo</h3><p>Take a picture of a puzzle</p></div>
+            <div class="mock-card"><h3>Load Photo</h3><p>Choose from photo library</p></div>
+            <div class="mock-card"><h3>Manual Input</h3><p>Build a puzzle from scratch</p></div>
+            <div class="mock-card"><h3>Test Puzzle</h3><p>Load a built-in example</p></div>
+            <div class="mock-sub">
+              Select grid size
+              <div class="mock-sub-btns">
+                <div class="mock-sub-btn">3</div>
+                <div class="mock-sub-btn">4</div>
+                <div class="mock-sub-btn">5</div>
+                <div class="mock-sub-btn">6</div>
+                <div class="mock-sub-btn">7</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scheme 4 -->
+  <div>
+    <div class="scheme-label">4. Warm White &amp; Coral</div>
+    <div class="mockup s4">
+      <div class="mock-body">
+        <div class="mock-title">KenKen Zero Puzzle Solver</div>
+        <div class="mock-tabs">
+          <div class="mock-tab active">New Puzzle</div>
+          <div class="mock-tab disabled">Editor</div>
+          <div class="mock-tab disabled">Solution</div>
+        </div>
+        <div class="mock-content">
+          <div class="mock-card-grid">
+            <div class="mock-card"><h3>Scan Photo</h3><p>Take a picture of a puzzle</p></div>
+            <div class="mock-card"><h3>Load Photo</h3><p>Choose from photo library</p></div>
+            <div class="mock-card"><h3>Manual Input</h3><p>Build a puzzle from scratch</p></div>
+            <div class="mock-card"><h3>Test Puzzle</h3><p>Load a built-in example</p></div>
+            <div class="mock-sub">
+              Select grid size
+              <div class="mock-sub-btns">
+                <div class="mock-sub-btn">3</div>
+                <div class="mock-sub-btn">4</div>
+                <div class="mock-sub-btn">5</div>
+                <div class="mock-sub-btn">6</div>
+                <div class="mock-sub-btn">7</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<h1 style="margin-top:40px">Solution View — 7x7 Puzzle</h1>
+
+<div class="grid">
+
+  <!-- Solution Scheme 1 -->
+  <div>
+    <div class="scheme-label">1. Soft Cream &amp; Navy</div>
+    <div class="mockup s1">
+      <div class="mock-body">
+        <div class="mock-title">KenKen Zero Puzzle Solver</div>
+        <div class="mock-tabs">
+          <div class="mock-tab">New Puzzle</div>
+          <div class="mock-tab">Editor</div>
+          <div class="mock-tab active">Solution</div>
+        </div>
+        <div class="mock-content">
+          <div class="mock-solve-status s-success">Solved in 4.2 ms</div>
+          <div class="mock-grid-wrap"><table class="mock-grid" id="grid-s1"></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Solution Scheme 2 -->
+  <div>
+    <div class="scheme-label">2. Cool Slate &amp; Teal</div>
+    <div class="mockup s2">
+      <div class="mock-body">
+        <div class="mock-title">KenKen Zero Puzzle Solver</div>
+        <div class="mock-tabs">
+          <div class="mock-tab">New Puzzle</div>
+          <div class="mock-tab">Editor</div>
+          <div class="mock-tab active">Solution</div>
+        </div>
+        <div class="mock-content">
+          <div class="mock-solve-status s-success">Solved in 4.2 ms</div>
+          <div class="mock-grid-wrap"><table class="mock-grid" id="grid-s2"></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Solution Scheme 3 -->
+  <div>
+    <div class="scheme-label">3. Lavender &amp; Indigo</div>
+    <div class="mockup s3">
+      <div class="mock-body">
+        <div class="mock-title">KenKen Zero Puzzle Solver</div>
+        <div class="mock-tabs">
+          <div class="mock-tab">New Puzzle</div>
+          <div class="mock-tab">Editor</div>
+          <div class="mock-tab active">Solution</div>
+        </div>
+        <div class="mock-content">
+          <div class="mock-solve-status s-success">Solved in 4.2 ms</div>
+          <div class="mock-grid-wrap"><table class="mock-grid" id="grid-s3"></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Solution Scheme 4 -->
+  <div>
+    <div class="scheme-label">4. Warm White &amp; Coral</div>
+    <div class="mockup s4">
+      <div class="mock-body">
+        <div class="mock-title">KenKen Zero Puzzle Solver</div>
+        <div class="mock-tabs">
+          <div class="mock-tab">New Puzzle</div>
+          <div class="mock-tab">Editor</div>
+          <div class="mock-tab active">Solution</div>
+        </div>
+        <div class="mock-content">
+          <div class="mock-solve-status s-success">Solved in 4.2 ms</div>
+          <div class="mock-grid-wrap"><table class="mock-grid" id="grid-s4"></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// 7x7 puzzle cage definitions
+const SIZE = 7;
+const cages = [
+  { target: 5,  op: '+', cells: [[0,0],[0,1],[1,0]] },
+  { target: 12, op: '*', cells: [[0,2],[0,3]] },
+  { target: 1,  op: '-', cells: [[0,4],[1,4]] },
+  { target: 42, op: '*', cells: [[0,5],[0,6]] },
+  { target: 7,  op: '+', cells: [[1,1],[1,2]] },
+  { target: 11, op: '+', cells: [[1,3],[2,3]] },
+  { target: 7,  op: '*', cells: [[1,5],[1,6]] },
+  { target: 7,  op: '+', cells: [[2,0],[3,0]] },
+  { target: 9,  op: '+', cells: [[2,1],[2,2]] },
+  { target: 10, op: '+', cells: [[2,4],[2,5],[2,6]] },
+  { target: 1,  op: '-', cells: [[3,1],[3,2]] },
+  { target: 7,  op: '/', cells: [[3,3],[3,4]] },
+  { target: 6,  op: '*', cells: [[3,5],[3,6]] },
+  { target: 30, op: '*', cells: [[4,0],[4,1]] },
+  { target: 6,  op: '-', cells: [[4,2],[5,2]] },
+  { target: 2,  op: '*', cells: [[4,3],[4,4]] },
+  { target: 7,  op: '+', cells: [[4,5],[4,6]] },
+  { target: 1,  op: '-', cells: [[5,0],[5,1]] },
+  { target: 5,  op: '+', cells: [[5,3],[6,3]] },
+  { target: 12, op: '+', cells: [[5,4],[5,5],[5,6]] },
+  { target: 21, op: '*', cells: [[6,0],[6,1],[6,2]] },
+  { target: 5,  op: '+', cells: [[6,4],[6,5]] },
+  { target: 3,  op: '-', cells: [[6,6]] },
+];
+
+// A valid solution for this puzzle
+const solution = [
+  [1, 2, 4, 3, 5, 7, 6],
+  [2, 3, 4, 5, 6, 7, 1],
+  [3, 4, 5, 6, 1, 2, 7],
+  [4, 5, 6, 7, 1, 2, 3],
+  [5, 6, 7, 1, 2, 3, 4],
+  [6, 7, 1, 2, 3, 4, 5],
+  [7, 1, 3, 2, 4, 1, 5],
+];
+
+// Build cage map
+const cageMap = Array.from({length: SIZE}, () => new Int8Array(SIZE).fill(-1));
+for (let ci = 0; ci < cages.length; ci++)
+  for (const [r, c] of cages[ci].cells)
+    cageMap[r][c] = ci;
+
+// Find label cell per cage
+const labelCell = {};
+for (let ci = 0; ci < cages.length; ci++) {
+  let br = SIZE, bc = SIZE;
+  for (const [r, c] of cages[ci].cells) {
+    if (r < br || (r === br && c < bc)) { br = r; bc = c; }
+  }
+  const { target, op } = cages[ci];
+  const label = cages[ci].cells.length === 1 ? '' : `${target}${op}`;
+  labelCell[`${br},${bc}`] = label;
+}
+
+function cageColor(ci, lightMode) {
+  const hue = (ci * 137.508) % 360;
+  if (lightMode) return `hsla(${hue}, 45%, 85%, 0.5)`;
+  return `hsla(${hue}, 50%, 40%, 0.2)`;
+}
+
+function renderGrid(tableId, borderColor, borderThin, textColor, labelColor, lightMode) {
+  const table = document.getElementById(tableId);
+  let html = '';
+  for (let r = 0; r < SIZE; r++) {
+    html += '<tr>';
+    for (let c = 0; c < SIZE; c++) {
+      const ci = cageMap[r][c];
+      const bt = (r === 0 || cageMap[r-1][c] !== ci) ? `border-top:2.5px solid ${borderColor}` : `border-top:1px solid ${borderThin}`;
+      const bb = (r === SIZE-1 || cageMap[r+1][c] !== ci) ? `border-bottom:2.5px solid ${borderColor}` : `border-bottom:1px solid ${borderThin}`;
+      const bl = (c === 0 || cageMap[r][c-1] !== ci) ? `border-left:2.5px solid ${borderColor}` : `border-left:1px solid ${borderThin}`;
+      const br_ = (c === SIZE-1 || cageMap[r][c+1] !== ci) ? `border-right:2.5px solid ${borderColor}` : `border-right:1px solid ${borderThin}`;
+      const bg = cageColor(ci, lightMode);
+      const label = labelCell[`${r},${c}`] || '';
+      const val = solution[r][c];
+      html += `<td style="${bt};${bb};${bl};${br_};background:${bg};position:relative;width:38px;height:38px;text-align:center;vertical-align:middle;font-size:1.1rem;font-weight:700;color:${textColor}">`;
+      if (label) html += `<span style="position:absolute;top:1px;left:3px;font-size:8px;font-weight:600;color:${labelColor}">${label}</span>`;
+      html += val;
+      html += '</td>';
+    }
+    html += '</tr>';
+  }
+  table.innerHTML = html;
+  table.style.borderCollapse = 'collapse';
+}
+
+// Render all four grids
+renderGrid('grid-s1', '#5a5060', '#ccc0b0', '#2a2a3a', '#6b6070', true);
+renderGrid('grid-s2', '#4a5a6a', '#c0c8d0', '#1e293b', '#5a6a7a', true);
+renderGrid('grid-s3', '#5a5070', '#c0b8d0', '#2d2b3d', '#6a6080', true);
+renderGrid('grid-s4', '#6a5550', '#d0c4ba', '#3a3330', '#7a6a60', true);
+</script>
+
+</body>
+</html>
